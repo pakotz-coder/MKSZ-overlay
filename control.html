@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vezérlő — MKSZ Live Overlay</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+:root{--bg:#101418;--panel:#1A2129;--panel2:#212A34;--ink:#F5F7FA;--mut:#8B98A5;--acc:#FFB800;--ok:#43D17C;--err:#FF5A5A;--line:#2C3742}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 Barlow,system-ui,sans-serif;padding:14px;max-width:760px;margin:0 auto}
+h1{font:800 22px "Barlow Condensed";text-transform:uppercase;letter-spacing:.05em;transform:skewX(-6deg);display:inline-block}
+.tag{font:700 12px "Barlow Condensed";letter-spacing:.15em;color:var(--acc);text-transform:uppercase}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin:10px 0}
+input[type=text]{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:9px;color:var(--ink);font:500 15px Barlow;padding:11px 12px;outline:none}
+input[type=text]:focus{border-color:var(--acc)}
+.btn{background:var(--acc);color:#181000;border:0;border-radius:9px;font:800 15px "Barlow Condensed";text-transform:uppercase;letter-spacing:.08em;padding:11px 16px;cursor:pointer}
+.btn.sec{background:var(--panel2);color:var(--ink);border:1px solid var(--line)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#status{font:600 13px Barlow;padding:5px 10px;border-radius:99px;background:var(--panel2);color:var(--mut)}
+#status.on{background:#123B26;color:var(--ok)}#status.err{background:#3B1212;color:var(--err)}
+.preview{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.pteam{flex:1;min-width:0}.pteam b{display:block;font:700 15px "Barlow Condensed";text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pteam small{color:var(--mut)}
+.pscore{font:800 34px "Barlow Condensed";white-space:nowrap}
+.pmeta{text-align:center;color:var(--mut);font-size:12px}
+.ticker{color:var(--mut);font-size:13px;margin-top:8px;border-top:1px solid var(--line);padding-top:8px;min-height:18px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:8px}
+.gbtn{background:var(--panel2);border:1px solid var(--line);border-radius:10px;color:var(--ink);font:700 14px "Barlow Condensed";text-transform:uppercase;letter-spacing:.05em;padding:16px 10px;cursor:pointer;text-align:left;position:relative}
+.gbtn small{display:block;font:500 11px Barlow;color:var(--mut);text-transform:none;letter-spacing:0;margin-top:3px}
+.gbtn.live{border-color:var(--acc);background:#2B2410}
+.gbtn.live::after{content:"ADÁSBAN";position:absolute;top:7px;right:8px;font:800 9px "Barlow Condensed";letter-spacing:.1em;color:#181000;background:var(--acc);padding:2px 6px;border-radius:4px}
+.split{display:flex;gap:8px;flex-wrap:wrap}.split>*{flex:1;min-width:130px}
+label.mini{font:600 11px Barlow;color:var(--mut);text-transform:uppercase;letter-spacing:.07em;display:block;margin-bottom:4px}
+.sw{display:flex;background:var(--panel2);border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.sw button{flex:1;background:none;border:0;color:var(--mut);font:700 13px "Barlow Condensed";text-transform:uppercase;padding:9px;cursor:pointer}
+.sw button.on{background:var(--acc);color:#181000}
+input[type=color]{width:100%;height:38px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);padding:3px;cursor:pointer}
+h2{font:700 15px "Barlow Condensed";text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin-bottom:8px}
+.warn{background:#3B2A0E;border:1px solid #6b4d14;border-radius:10px;padding:10px 12px;font-size:13px;color:#FFD98A;margin:10px 0;display:none}
+</style>
+</head>
+<body>
+<div class="tag">MKSZ Live Overlay</div>
+<div class="row" style="justify-content:space-between"><h1>Vezérlő / Control</h1><span id="status">nincs kapcsolat</span></div>
+<div class="warn" id="cfgwarn">⚠ A Firebase konfiguráció még nincs beállítva a fájl tetején (FIREBASE_CONFIG). A grafikák a kimeneten csak beállítás után jelennek meg.</div>
+
+<div class="card">
+  <h2>Mérkőzés / Match</h2>
+  <div class="row">
+    <input type="text" id="mlink" placeholder="https://livescore.mksz.hu/32021351777/esemenyek — link vagy meccs-azonosító" style="flex:1;min-width:220px">
+    <button class="btn" id="connBtn" onclick="connectMatch()">Kapcsolódás</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Előnézet / Preview</h2>
+  <div class="preview">
+    <div class="pteam"><b id="pA">—</b><small id="pAx"></small></div>
+    <div style="text-align:center"><div class="pscore"><span id="pSA">0</span>:<span id="pSB">0</span></div><div class="pmeta"><span id="pClock">00:00</span> · <span id="pPer">—</span></div></div>
+    <div class="pteam" style="text-align:right"><b id="pB">—</b><small id="pBx"></small></div>
+  </div>
+  <div class="ticker" id="ticker">Várakozás az adatokra… / Waiting for data…</div>
+</div>
+
+<div class="card">
+  <h2>Beállítások / Settings</h2>
+  <div class="split">
+    <div><label class="mini">Nyelv a képernyőn / On-air language</label>
+      <div class="sw"><button id="lhu" class="on" onclick="setLang('hu')">Magyar</button><button id="len" onclick="setLang('en')">English</button></div></div>
+    <div><label class="mini">Gólvillanás automatikusan / Auto goal flash</label>
+      <div class="sw"><button id="afOn" class="on" onclick="setAuto(true)">Be</button><button id="afOff" onclick="setAuto(false)">Ki</button></div></div>
+    <div><label class="mini">Hazai szín / Home color</label><input type="color" id="colA" value="#D6001C" onchange="pushColors()"></div>
+    <div><label class="mini">Vendég szín / Away color</label><input type="color" id="colB" value="#0057B8" onchange="pushColors()"></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Grafikák / Graphics</h2>
+  <div class="grid" id="ggrid"></div>
+  <div class="row" style="margin-top:10px">
+    <button class="btn sec" style="flex:1" onclick="hideAll()">Minden panel le / Hide panels</button>
+  </div>
+</div>
+
+<script>
+/* ================= FIREBASE CONFIG =================
+   Illeszd be ide a Firebase projekted web-konfigurációját
+   (Firebase console → Project settings → Your apps → Config).
+   Ugyanezt kell beilleszteni az output.html tetején is.  */
+const FIREBASE_CONFIG = {
+  apiKey: "PASTE_ME",
+  authDomain: "PASTE_ME.firebaseapp.com",
+  databaseURL: "https://PASTE_ME-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "PASTE_ME"
+};
+/* =================================================== */
+const SOCKET_URL="https://livescore-socket.mksz.hu";
+const SOCKET_TOKEN="bYaM1HVU31Zv9BRy"; // a livescore.mksz.hu kliens nyilvános tokenje
+
+const room=new URLSearchParams(location.search).get('room')||'default';
+document.title='Vezérlő · '+room;
+
+let db=null, fbReady=false;
+if(FIREBASE_CONFIG.apiKey!=="PASTE_ME"){
+  firebase.initializeApp(FIREBASE_CONFIG);
+  firebase.auth().signInAnonymously().then(()=>{fbReady=true;db=firebase.database();pushColors();pushDisplay();}).catch(e=>fail('Firebase auth: '+e.message));
+}else{document.getElementById('cfgwarn').style.display='block'}
+
+/* ---------- state ---------- */
+const S={matchId:null,teams:{A:{},B:{}},score:{a:0,b:0},ht:null,period:'1',periodText:'',periodLength:30,
+ clock:{sec:0,running:false,at:Date.now()},stats:{A:z(),B:z()},gate:{A:Array(9).fill(0),B:Array(9).fill(0)},
+ players:{},officials:{A:[],B:[]},gks:{A:null,B:null,saves:{}},emptyNet:{A:false,B:false},timeouts:{A:0,B:0},
+ pens:{A:{y:0,s2:0,r:0,b:0},B:{y:0,s2:0,r:0,b:0}},timeline:[],lead:[],run:{team:null,n:0},lastGoal:null};
+function z(){return{goals:0,shots:0,g7:0,a7:0,post:0,miss:0,block:0,saved:0,to:0,saves:0}}
+const seen=new Set();
+const display={graphic:null,visible:false,lang:'hu',autoFlash:true,flash:null};
+
+/* ---------- socket ---------- */
+let socket=null;
+function connectMatch(){
+  const v=document.getElementById('mlink').value.trim();
+  const m=v.match(/(\d{8,})/); if(!m){fail('Érvénytelen link / Invalid link');return}
+  const id=m[1]; S.matchId=id;
+  if(socket)socket.disconnect();
+  setStatus('kapcsolódás…','');
+  socket=io(SOCKET_URL,{transports:['websocket','polling'],auth:{token:SOCKET_TOKEN}});
+  socket.on('connect',()=>{socket.emit('join','Merkozes_0_'+id);setStatus('élő kapcsolat','on')});
+  socket.on('disconnect',()=>setStatus('megszakadt — újracsatlakozás…','err'));
+  socket.on('connect_error',e=>fail('Socket: '+e.message));
+  socket.on('matchdata',onEvent);
+}
+function setStatus(t,c){const s=document.getElementById('status');s.textContent=t;s.className=c}
+function fail(t){setStatus(t,'err')}
+
+/* ---------- reducer ---------- */
+function onEvent(e){
+  if(!e||seen.has(e.UUID))return; seen.add(e.UUID);
+  const p=e.params||{};
+  if(p.isDraft===true||p.approved===false)return;
+  const T=p.selectedTeamId==='teamA'?'A':p.selectedTeamId==='teamB'?'B':null;
+  const O=T==='A'?'B':'A';
+  const tg=(e.totalGameTime!=null)?e.totalGameTime:null;
+  if(tg!=null){S.clock.sec=tg;S.clock.at=Date.now()}
+  switch(e.action){
+    case 'init':{
+      const q=p;
+      S.teams.A={id:q.team_a_id,name:q.team_a_name,short:q.team_a_shortname||q.team_a_name,logo:q.team_a_logo||''};
+      S.teams.B={id:q.team_b_id,name:q.team_b_name,short:q.team_b_shortname||q.team_b_name,logo:q.team_b_logo||''};
+      S.periodLength=q.period_length||30; S.periodsDef=q.periods||[];
+      const put=(arr,team,off)=> (arr||[]).forEach(pl=>{S.players[pl.id]={name:pl.name,jersey:pl.jersey??'',team,gk:!!pl.goalkeeper,off:!!off,goals:0,g7:0,shots:0}});
+      put(q.team_a_players,'A');put(q.team_a_players_entry,'A');put(q.team_b_players,'B');put(q.team_b_players_entry,'B');
+      S.officials.A=q.team_a_officials||[];S.officials.B=q.team_b_officials||[];
+      break}
+    case 'gol': case 'gol7m':{
+      if(!T)break;
+      if(p.teamScore){S.score.a=p.teamScore.teamA;S.score.b=p.teamScore.teamB}
+      const st=S.stats[T]; st.goals++; st.shots++;
+      if(e.action==='gol7m'){st.g7++;st.a7++}
+      const pl=S.players[p.selectedPlayer]; if(pl){pl.goals++;pl.shots++;if(e.action==='gol7m')pl.g7++}
+      if(p.selectedGateArea>=1&&p.selectedGateArea<=9)S.gate[T][p.selectedGateArea-1]++;
+      if(S.run.team===T)S.run.n++;else S.run={team:T,n:1};
+      S.lead.push({t:S.clock.sec,d:S.score.a-S.score.b});
+      S.lastGoal={uuid:e.UUID,team:T,player:pl?pl.name:'',jersey:pl?pl.jersey:'',score:{...S.score},sev:e.action==='gol7m'};
+      tl(e,T,pl);
+      if(display.autoFlash&&display.visible!==false){display.flash={uuid:e.UUID,ts:Date.now()};pushDisplay()}
+      break}
+    case 'vedett': case 'vedett7m':{
+      if(!T)break;
+      const st=S.stats[T]; st.shots++; st.saved++; if(e.action==='vedett7m')st.a7++;
+      const pl=S.players[p.selectedPlayer]; if(pl)pl.shots++;
+      S.stats[O].saves++;
+      const gk=p.otherTeamGoalKeeper&&p.otherTeamGoalKeeper.id; if(gk)S.gks.saves[gk]=(S.gks.saves[gk]||0)+1;
+      tl(e,T,pl); break}
+    case 'kapufa': case 'rontott': case 'blokkolt':{
+      if(!T)break;
+      const st=S.stats[T]; st.shots++;
+      st[e.action==='kapufa'?'post':e.action==='rontott'?'miss':'block']++;
+      const pl=S.players[p.selectedPlayer]; if(pl)pl.shots++;
+      tl(e,T,pl); break}
+    case 'eladott': case 'technikai':{
+      if(T)S.stats[T].to++;
+      tl(e,T,S.players[p.selectedPlayer]); break}
+    case 'timeOut':{
+      if(T&&p.usedTimeOuts!=null)S.timeouts[T]=p.usedTimeOuts;
+      tl(e,T,null); break}
+    case 'periodchange':{
+      S.period=String(p.period);
+      const def=(S.periodsDef||[]).find(x=>String(x.value)===S.period);
+      S.periodText=def?def.text:('Periódus '+S.period);
+      S.clock.running=def?def.type==='normal':false;
+      if(S.period==='2'&&S.ht==null)S.ht={...S.score};
+      break}
+    case 'playtime':{S.clock.running=!S.clock.running;S.clock.at=Date.now();break}
+    case 'gamedatachange':{
+      const n=p.name||'';
+      if(n==='team_a_actual_goalkeeper'||n==='team_b_actual_goalkeeper'){
+        const t=n.includes('_a_')?'A':'B'; const id=p.value&&p.value.id;
+        S.emptyNet[t]=(id===0); if(id)S.gks[t]=id;
+      } break}
+    default:{
+      // ismeretlen / nem tesztelt akciók (pl. lapok, kiállítás): számláló + idővonal a feed saját nevével
+      const a=(e.action||'').toLowerCase();
+      if(T){const pe=S.pens[T];
+        if(a.includes('sarga'))pe.y++; else if(a.includes('piros'))pe.r++;
+        else if(a.includes('kek'))pe.b++; else if(a.includes('kiall')||a.includes('2perc')||a==='ketperc')pe.s2++;}
+      tl(e,T,S.players[p.selectedPlayer]);
+    }
+  }
+  render(); pushState();
+}
+function tl(e,T,pl){
+  const nm=(e.params&&e.params.selectedAction&&e.params.selectedAction.actionName)||e.action;
+  S.timeline.unshift({t:e.params&&e.params.gameTime||'',team:T,act:e.action,name:nm,player:pl?pl.name:'',jersey:pl?pl.jersey:'',score:S.score.a+':'+S.score.b});
+  if(S.timeline.length>10)S.timeline.pop();
+}
+
+/* ---------- preview ---------- */
+function render(){
+  document.getElementById('pA').textContent=S.teams.A.short||'—';
+  document.getElementById('pB').textContent=S.teams.B.short||'—';
+  document.getElementById('pAx').textContent=`Lövés ${S.stats.A.goals}/${S.stats.A.shots} · 7m ${S.stats.A.g7}/${S.stats.A.a7} · TO ${S.timeouts.A}`;
+  document.getElementById('pBx').textContent=`Lövés ${S.stats.B.goals}/${S.stats.B.shots} · 7m ${S.stats.B.g7}/${S.stats.B.a7} · TO ${S.timeouts.B}`;
+  document.getElementById('pSA').textContent=S.score.a;
+  document.getElementById('pSB').textContent=S.score.b;
+  document.getElementById('pPer').textContent=S.periodText||('P'+S.period);
+  const t=S.timeline[0];
+  if(t)document.getElementById('ticker').textContent=`${t.t} — ${t.name}${t.player?' · '+t.player:''} (${t.score})`;
+}
+setInterval(()=>{ // helyi órajárás az előnézetben
+  let s=S.clock.sec+(S.clock.running?(Date.now()-S.clock.at)/1000:0);
+  document.getElementById('pClock').textContent=mmss(s);
+},500);
+function mmss(s){s=Math.max(0,Math.floor(s));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
+
+/* ---------- graphics buttons ---------- */
+const GFX=[
+ ['bug','Eredményjelző','állandó sávscore + óra','toggle'],
+ ['teamstats','Csapatstatisztika','lövések, 7m, védések, eladott'],
+ ['shots','Lövéskimenetek','gól · kapufa · fölé · blokk · védve'],
+ ['gate','Kapu-térkép','hová érkeztek a gólok (3×3)'],
+ ['scorers','Góllövők','legjobb dobók, mindkét oldal'],
+ ['gk','Kapusok','védések kapusonként'],
+ ['run','Sorozat','ki visz éppen X–0-s szériát'],
+ ['lead','Vezetés-grafikon','különbség az idő mentén'],
+ ['rosterA','Kezdő / keret — Hazai','játékosok + stáb'],
+ ['rosterB','Kezdő / keret — Vendég','játékosok + stáb'],
+ ['htft','Félidő / Végeredmény','nagy eredménypanel'],
+];
+const grid=document.getElementById('ggrid');
+GFX.forEach(([id,name,sub])=>{
+  const b=document.createElement('button');b.className='gbtn';b.id='g_'+id;
+  b.innerHTML=name+'<small>'+sub+'</small>';
+  b.onclick=()=>toggle(id);grid.appendChild(b);
+});
+function toggle(id){
+  if(id==='bug'){display.bug=!display.bug}
+  else{display.graphic=(display.graphic===id)?null:id}
+  display.visible=true;pushDisplay();paint();
+}
+function hideAll(){display.graphic=null;pushDisplay();paint()}
+function paint(){
+  GFX.forEach(([id])=>{const b=document.getElementById('g_'+id);
+    b.classList.toggle('live',id==='bug'?!!display.bug:display.graphic===id)});
+}
+function setLang(l){display.lang=l;document.getElementById('lhu').classList.toggle('on',l==='hu');document.getElementById('len').classList.toggle('on',l==='en');pushDisplay()}
+function setAuto(v){display.autoFlash=v;document.getElementById('afOn').classList.toggle('on',v);document.getElementById('afOff').classList.toggle('on',!v);pushDisplay()}
+
+/* ---------- firebase push ---------- */
+let stTimer=null;
+function pushState(){ if(!fbReady)return;
+  if(stTimer)return; stTimer=setTimeout(()=>{stTimer=null;
+    db.ref('rooms/'+room+'/state').set(JSON.parse(JSON.stringify(S)));},400);
+}
+function pushDisplay(){ if(!fbReady)return;
+  db.ref('rooms/'+room+'/display').set({...display,ts:Date.now()});
+}
+function pushColors(){ if(!fbReady)return;
+  db.ref('rooms/'+room+'/colors').set({A:document.getElementById('colA').value,B:document.getElementById('colB').value});
+}
+</script>
+</body>
+</html>

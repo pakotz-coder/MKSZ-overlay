@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<title>Output — MKSZ Live Overlay</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@500;600;700&family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+:root{--ca:#D6001C;--cb:#0057B8;--ink:#FFFFFF;--carbon:#0E1319;--carbon2:#161E27;--gold:#FFB800;--mut:#9FB0BF;--skew:-12deg}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:transparent;overflow:hidden;width:100%;height:100%}
+#stage{position:absolute;top:0;left:0;width:1920px;height:1080px;transform-origin:top left;font-family:Barlow,sans-serif;color:var(--ink)}
+.cond{font-family:"Barlow Condensed"}
+/* ---------- score bug ---------- */
+#bug{position:absolute;top:54px;left:64px;display:flex;align-items:stretch;filter:drop-shadow(0 6px 18px rgba(0,0,0,.55));opacity:0;transform:translateY(-30px);transition:opacity .45s,transform .45s cubic-bezier(.2,.9,.25,1.2)}
+#bug.show{opacity:1;transform:none}
+.wedge{display:flex;align-items:center;gap:12px;padding:0 22px;height:64px;transform:skewX(var(--skew));border-radius:6px}
+.wedge>*{transform:skewX(calc(var(--skew)*-1))}
+.wA{background:linear-gradient(100deg,var(--ca) 78%,color-mix(in srgb,var(--ca) 60%,#000) 78%);margin-right:-8px}
+.wB{background:linear-gradient(100deg,color-mix(in srgb,var(--cb) 60%,#000) 22%,var(--cb) 22%);margin-left:-8px}
+.tname{font:800 26px/1 "Barlow Condensed";text-transform:uppercase;letter-spacing:.03em;max-width:250px;white-space:nowrap;overflow:hidden}
+.tscore{font:800 40px/1 "Barlow Condensed";min-width:44px;text-align:center}
+.tdots{display:flex;flex-direction:column;gap:4px}
+.dot{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.28)}.dot.on{background:var(--gold)}
+.en{font:800 12px "Barlow Condensed";background:#fff;color:#111;border-radius:4px;padding:2px 6px;letter-spacing:.05em;display:none}
+.en.show{display:block}
+#chip{background:var(--carbon);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 20px;transform:skewX(var(--skew));height:64px;z-index:2;border-radius:4px;box-shadow:0 0 0 2px rgba(255,255,255,.06) inset}
+#chip>*{transform:skewX(calc(var(--skew)*-1))}
+#clock{font:700 30px/1 "Barlow Condensed";letter-spacing:.03em}
+#period{font:700 13px/1 "Barlow Condensed";color:var(--gold);text-transform:uppercase;letter-spacing:.12em;margin-top:3px}
+/* ---------- lower third (goal flash) ---------- */
+#flash{position:absolute;left:0;right:0;bottom:96px;display:flex;justify-content:center;pointer-events:none}
+#flash .inner{display:flex;align-items:stretch;filter:drop-shadow(0 8px 24px rgba(0,0,0,.6));clip-path:polygon(0 0,0 0,0 100%,0 100%);transition:clip-path .5s cubic-bezier(.2,.8,.2,1)}
+#flash.show .inner{clip-path:polygon(-5% 0,105% 0,105% 100%,-5% 100%)}
+.fteam{background:var(--fc,#D6001C);transform:skewX(var(--skew));padding:0 30px;display:flex;align-items:center;border-radius:6px 0 0 6px}
+.fteam span{transform:skewX(calc(var(--skew)*-1));font:800 46px "Barlow Condensed";text-transform:uppercase}
+.fmain{background:var(--carbon);transform:skewX(var(--skew));padding:14px 34px;border-radius:0 6px 6px 0;margin-left:-6px}
+.fmain>div{transform:skewX(calc(var(--skew)*-1))}
+.flabel{font:700 16px "Barlow Condensed";color:var(--gold);text-transform:uppercase;letter-spacing:.22em}
+.fplayer{font:800 40px/1.05 "Barlow Condensed";text-transform:uppercase}
+.fscore{font:700 24px "Barlow Condensed";color:var(--mut)}
+/* ---------- center panel ---------- */
+#panel{position:absolute;left:50%;top:50%;width:1150px;transform:translate(-50%,-50%);filter:drop-shadow(0 14px 40px rgba(0,0,0,.65));clip-path:polygon(0 0,0 0,-12% 100%,-12% 100%);transition:clip-path .55s cubic-bezier(.2,.8,.2,1)}
+#panel.show{clip-path:polygon(-4% 0,112% 0,104% 100%,-12% 100%)}
+.phead{display:flex;align-items:center;gap:16px;background:linear-gradient(95deg,var(--carbon) 60%,var(--carbon2));transform:skewX(var(--skew));border-radius:8px 8px 0 0;padding:16px 34px;border-bottom:3px solid var(--gold)}
+.phead>*{transform:skewX(calc(var(--skew)*-1))}
+.ptitle{font:800 34px/1 "Barlow Condensed";text-transform:uppercase;letter-spacing:.04em;font-style:italic}
+.psub{font:600 16px "Barlow Condensed";color:var(--mut);text-transform:uppercase;letter-spacing:.14em;margin-left:auto}
+.pbody{background:linear-gradient(180deg,rgba(14,19,25,.97),rgba(18,25,33,.97));transform:skewX(var(--skew));border-radius:0 0 8px 8px;padding:26px 40px;min-height:180px}
+.pbody>.un{transform:skewX(calc(var(--skew)*-1))}
+.fadeSwap{animation:fs .35s ease}
+@keyframes fs{from{opacity:0;transform:skewX(calc(var(--skew)*-1)) translateY(10px)}to{opacity:1;transform:skewX(calc(var(--skew)*-1)) translateY(0)}}
+/* stat rows */
+.srow{display:grid;grid-template-columns:150px 1fr 260px 1fr 150px;align-items:center;gap:14px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+.srow:last-child{border-bottom:0}
+.sval{font:800 34px/1 "Barlow Condensed";text-align:center}
+.slab{font:700 17px "Barlow Condensed";color:var(--mut);text-transform:uppercase;letter-spacing:.1em;text-align:center}
+.bar{height:12px;border-radius:99px;background:rgba(255,255,255,.09);overflow:hidden;display:flex}
+.bar i{display:block;height:100%;width:0;transition:width .9s cubic-bezier(.2,.8,.2,1)}
+.bar.rev{justify-content:flex-end}
+.thdr{display:grid;grid-template-columns:150px 1fr 260px 1fr 150px;gap:14px;margin-bottom:10px}
+.thdr b{font:800 24px "Barlow Condensed";text-transform:uppercase;white-space:nowrap;overflow:hidden}
+/* tables */
+.tbl{width:100%;border-collapse:collapse}
+.tbl td,.tbl th{padding:8px 10px;font:600 20px Barlow;border-bottom:1px solid rgba(255,255,255,.07);text-align:left}
+.tbl th{font:700 15px "Barlow Condensed";color:var(--mut);text-transform:uppercase;letter-spacing:.1em}
+.tbl td.n{font:800 24px "Barlow Condensed";text-align:center}
+.jer{display:inline-block;min-width:34px;text-align:center;font:800 17px "Barlow Condensed";background:rgba(255,255,255,.1);border-radius:5px;padding:2px 5px;margin-right:10px}
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:0 44px}
+/* gate grid */
+.gates{display:flex;justify-content:space-around;align-items:center}
+.gatebox{text-align:center}
+.gname{font:800 24px "Barlow Condensed";text-transform:uppercase;margin-bottom:12px}
+.ggrid{display:grid;grid-template-columns:repeat(3,110px);grid-template-rows:repeat(3,86px);gap:5px;background:rgba(255,255,255,.06);padding:10px;border-radius:10px;border:3px solid rgba(255,255,255,.25)}
+.gcell{display:flex;align-items:center;justify-content:center;font:800 30px "Barlow Condensed";border-radius:6px;background:rgba(255,255,255,.05)}
+/* lead graph */
+#leadsvg{width:100%;height:280px}
+/* run */
+.runwrap{text-align:center;padding:14px 0}
+.runnum{font:800 110px/1 "Barlow Condensed";font-style:italic}
+.runlab{font:700 24px "Barlow Condensed";text-transform:uppercase;letter-spacing:.16em;color:var(--mut)}
+/* htft */
+.htft{display:flex;align-items:center;justify-content:center;gap:40px;padding:18px 0}
+.htft .nm{font:800 40px "Barlow Condensed";text-transform:uppercase;max-width:340px;text-align:center}
+.bigsc{font:800 130px/1 "Barlow Condensed";font-style:italic}
+.htsc{text-align:center;font:700 26px "Barlow Condensed";color:var(--mut);margin-top:-6px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bug">
+    <div class="wedge wA"><span class="tname" id="bAn">—</span><span class="en" id="enA">ÜRES KAPU</span><span class="tdots" id="toA"></span><span class="tscore" id="bAs">0</span></div>
+    <div id="chip"><div id="clock">00:00</div><div id="period">·</div></div>
+    <div class="wedge wB"><span class="tscore" id="bBs">0</span><span class="tdots" id="toB"></span><span class="en" id="enB">ÜRES KAPU</span><span class="tname" id="bBn">—</span></div>
+  </div>
+  <div id="panel"><div class="phead"><div class="ptitle" id="pT">—</div><div class="psub" id="pS"></div></div><div class="pbody"><div class="un" id="pB"></div></div></div>
+  <div id="flash"><div class="inner"><div class="fteam"><span id="fTeam">GÓL</span></div><div class="fmain"><div><div class="flabel" id="fLab">GÓL!</div><div class="fplayer" id="fPl">—</div><div class="fscore" id="fSc">0 : 0</div></div></div></div></div>
+</div>
+<script>
+/* ================= FIREBASE CONFIG — ugyanaz, mint a control.html-ben ================= */
+const FIREBASE_CONFIG = {
+  apiKey: "PASTE_ME",
+  authDomain: "PASTE_ME.firebaseapp.com",
+  databaseURL: "https://PASTE_ME-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "PASTE_ME"
+};
+/* ===================================================================================== */
+const room=new URLSearchParams(location.search).get('room')||'default';
+function fit(){const s=Math.min(innerWidth/1920,innerHeight/1080);document.getElementById('stage').style.transform='scale('+s+')'}
+addEventListener('resize',fit);fit();
+
+const L={
+ hu:{goal:'GÓL!',goal7:'GÓL — HETESBŐL!',shots:'Lövések',eff:'Hatékonyság',g7:'Hétméteres',saves:'Védések',to:'Eladott labdák',timeouts:'Időkérések',post:'Kapufa',miss:'Fölé / mellé',block:'Blokkolva',saved:'Védve',teamstats:'Csapatstatisztika',shotsT:'Lövéskimenetek',gate:'Hová érkeztek a gólok',scorers:'Góllövők',gk:'Kapusteljesítmény',run:'Sorozat',lead:'A mérkőzés íve',roster:'Keret',officials:'Stáb',htP:'Félidő',ftP:'Végeredmény',live:'ÉLŐ',unanswered:'válasz nélküli gól',diff:'gólkülönbség',empty:'ÜRES KAPU',min:'perc'},
+ en:{goal:'GOAL!',goal7:'GOAL — 7M PENALTY!',shots:'Shots',eff:'Efficiency',g7:'7-metre throws',saves:'Saves',to:'Turnovers',timeouts:'Timeouts',post:'Woodwork',miss:'Off target',block:'Blocked',saved:'Saved',teamstats:'Team statistics',shotsT:'Shot outcomes',gate:'Goal placement',scorers:'Top scorers',gk:'Goalkeepers',run:'Scoring run',lead:'Match flow',roster:'Squad',officials:'Bench',htP:'Half-time',ftP:'Full-time',live:'LIVE',unanswered:'unanswered goals',diff:'goal difference',empty:'EMPTY NET',min:'min'}
+};
+let S=null,D={},C={A:'#D6001C',B:'#0057B8'},curGfx=null,flashShown=null;
+
+firebase.initializeApp(FIREBASE_CONFIG);
+firebase.auth().signInAnonymously().then(()=>{
+  const db=firebase.database();
+  db.ref('rooms/'+room+'/state').on('value',s=>{S=s.val();if(S)renderAll()});
+  db.ref('rooms/'+room+'/colors').on('value',s=>{const v=s.val();if(v){C=v;
+    document.documentElement.style.setProperty('--ca',C.A);
+    document.documentElement.style.setProperty('--cb',C.B);}});
+  db.ref('rooms/'+room+'/display').on('value',s=>{D=s.val()||{};applyDisplay()});
+});
+const t=()=>L[D.lang==='en'?'en':'hu'];
+
+/* ---------- clock tick ---------- */
+setInterval(()=>{if(!S)return;
+  let sec=S.clock.sec+(S.clock.running?(Date.now()-S.clock.at)/1000:0);
+  sec=Math.min(sec,(S.periodLength||30)*2*60+((S.period>'3')?600:0));
+  document.getElementById('clock').textContent=mmss(sec);
+},250);
+function mmss(s){s=Math.max(0,Math.floor(s));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
+
+/* ---------- display routing ---------- */
+function applyDisplay(){
+  document.getElementById('bug').classList.toggle('show',!!D.bug);
+  const p=document.getElementById('panel');
+  if(D.graphic){ if(curGfx&&curGfx!==D.graphic&&p.classList.contains('show')){swapPanel(D.graphic)} else {curGfx=D.graphic;buildPanel();p.classList.add('show')} }
+  else p.classList.remove('show');
+  if(D.flash&&D.flash.uuid&&D.flash.uuid!==flashShown&&S&&S.lastGoal&&S.lastGoal.uuid===D.flash.uuid){showFlash()}
+  renderAll();
+}
+function swapPanel(g){ // panelváltás lebontás nélkül: csak a tartalom úszik át
+  const b=document.getElementById('pB');b.classList.remove('fadeSwap');void b.offsetWidth;
+  curGfx=g;buildPanel();b.classList.add('fadeSwap');
+}
+function showFlash(){
+  flashShown=D.flash.uuid;const g=S.lastGoal,f=document.getElementById('flash');
+  document.getElementById('fTeam').textContent=S.teams[g.team].short;
+  document.querySelector('.fteam').style.setProperty('--fc',g.team==='A'?C.A:C.B);
+  document.querySelector('.fteam').style.background=g.team==='A'?C.A:C.B;
+  document.getElementById('fLab').textContent=g.sev?t().goal7:t().goal;
+  document.getElementById('fPl').textContent=(g.jersey?('#'+g.jersey+' '):'')+g.player;
+  document.getElementById('fSc').textContent=g.score.a+' : '+g.score.b;
+  f.classList.add('show');setTimeout(()=>f.classList.remove('show'),6000);
+}
+
+/* ---------- renderers ---------- */
+function renderAll(){ if(!S)return;
+  document.getElementById('bAn').textContent=S.teams.A.short||'—';
+  document.getElementById('bBn').textContent=S.teams.B.short||'—';
+  cnt('bAs',S.score.a);cnt('bBs',S.score.b);
+  document.getElementById('period').textContent=S.periodText||('P'+S.period);
+  dots('toA',S.timeouts.A);dots('toB',S.timeouts.B);
+  document.getElementById('enA').classList.toggle('show',!!S.emptyNet.A);
+  document.getElementById('enB').classList.toggle('show',!!S.emptyNet.B);
+  document.getElementById('enA').textContent=t().empty;document.getElementById('enB').textContent=t().empty;
+  if(curGfx&&document.getElementById('panel').classList.contains('show'))buildPanel(true);
+}
+function dots(id,n){const e=document.getElementById(id);e.innerHTML='';for(let i=0;i<3;i++){const d=document.createElement('span');d.className='dot'+(i<n?' on':'');e.appendChild(d)}}
+const cntState={};
+function cnt(id,v){const e=document.getElementById(id);const from=cntState[id]??v;cntState[id]=v;
+  if(from===v){e.textContent=v;return}
+  const st=performance.now();(function step(n){const p=Math.min(1,(n-st)/500);
+  e.textContent=Math.round(from+(v-from)*p);if(p<1)requestAnimationFrame(step)})(st)}
+
+function buildPanel(update){
+  const T=t(),A=S.teams.A,B=S.teams.B,sa=S.stats.A,sb=S.stats.B;
+  const head=(ti,su)=>{document.getElementById('pT').textContent=ti;document.getElementById('pS').textContent=su||''};
+  const body=document.getElementById('pB');
+  const pct=(g,s)=>s?Math.round(100*g/s):0;
+  const bars=(l,va,vb,fa,fb)=>{const tot=(va+vb)||1;return `<div class="srow">
+    <div class="sval">${fa??va}</div><div class="bar rev"><i style="background:${C.A};width:${100*va/tot}%"></i></div>
+    <div class="slab">${l}</div>
+    <div class="bar"><i style="background:${C.B};width:${100*vb/tot}%"></i></div><div class="sval">${fb??vb}</div></div>`};
+  const hdr=`<div class="thdr"><b style="color:${C.A}">${A.short||''}</b><span></span><span></span><span></span><b style="color:${C.B};text-align:right">${B.short||''}</b></div>`;
+
+  switch(curGfx){
+   case 'teamstats':
+    head(T.teamstats,S.score.a+' : '+S.score.b);
+    body.innerHTML=hdr
+     +bars(T.shots,sa.shots,sb.shots,`${sa.goals}/${sa.shots}`,`${sb.goals}/${sb.shots}`)
+     +bars(T.eff,pct(sa.goals,sa.shots),pct(sb.goals,sb.shots),pct(sa.goals,sa.shots)+'%',pct(sb.goals,sb.shots)+'%')
+     +bars(T.g7,sa.a7,sb.a7,`${sa.g7}/${sa.a7}`,`${sb.g7}/${sb.a7}`)
+     +bars(T.saves,sa.saves,sb.saves)
+     +bars(T.to,sa.to,sb.to)
+     +bars(T.timeouts,S.timeouts.A,S.timeouts.B);
+    grow(body);break;
+   case 'shots':
+    head(T.shotsT,'');
+    body.innerHTML=hdr
+     +bars(T.goal.replace('!',''),sa.goals,sb.goals)
+     +bars(T.post,sa.post,sb.post)
+     +bars(T.miss,sa.miss,sb.miss)
+     +bars(T.block,sa.block,sb.block)
+     +bars(T.saved,sa.saved,sb.saved);
+    grow(body);break;
+   case 'gate':{
+    head(T.gate,'');
+    const g=(team,col)=>{const arr=S.gate[team]||[];const mx=Math.max(1,...arr);
+      return `<div class="gatebox"><div class="gname" style="color:${col}">${S.teams[team].short}</div><div class="ggrid">${
+      arr.map(v=>`<div class="gcell" style="background:${v?`color-mix(in srgb, ${col} ${20+60*v/mx}%, transparent)`:'rgba(255,255,255,.05)'}">${v||''}</div>`).join('')}</div></div>`};
+    body.innerHTML=`<div class="gates">${g('A',C.A)}${g('B',C.B)}</div>`;break}
+   case 'scorers':{
+    head(T.scorers,'');
+    const list=Object.values(S.players||{}).filter(p=>p.goals>0).sort((a,b)=>b.goals-a.goals).slice(0,10);
+    body.innerHTML=`<div class="cols2">${['A','B'].map(tm=>`<table class="tbl">${
+      list.filter(p=>p.team===tm).slice(0,5).map(p=>`<tr><td><span class="jer" style="background:${tm==='A'?C.A:C.B}">${p.jersey}</span>${p.name}</td><td class="n">${p.goals}${p.g7?` <small style="color:var(--mut)">(7m: ${p.g7})</small>`:''}</td></tr>`).join('')}</table>`).join('')}</div>`;break}
+   case 'gk':{
+    head(T.gk,T.saves);
+    const rows=Object.entries(S.gks&&S.gks.saves||{}).map(([id,n])=>{const p=(S.players||{})[id]||{name:'#'+id,jersey:'',team:''};return{p,n}}).sort((a,b)=>b.n-a.n);
+    body.innerHTML=`<table class="tbl"><tr><th></th><th>${T.saves}</th></tr>${rows.map(r=>`<tr><td><span class="jer" style="background:${r.p.team==='A'?C.A:C.B}">${r.p.jersey}</span>${r.p.name}</td><td class="n">${r.n}</td></tr>`).join('')}</table>`;break}
+   case 'run':{
+    head(T.run,'');
+    const r=S.run||{};const col=r.team==='A'?C.A:C.B;
+    body.innerHTML=`<div class="runwrap"><div class="runnum" style="color:${col}">${r.n||0}–0</div>
+      <div class="runlab">${r.team?S.teams[r.team].short:''} · ${r.n||0} ${T.unanswered}</div></div>`;break}
+   case 'lead':{
+    head(T.lead,T.diff);
+    const d=S.lead||[];const W=1050,H=250,max=Math.max(3,...d.map(p=>Math.abs(p.d)));
+    const tmax=Math.max(60,(S.periodLength||30)*120);
+    const x=v=>30+(W-60)*Math.min(1,v/tmax), y=v=>H/2-(H/2-16)*(v/max);
+    const pts='30,'+(H/2)+' '+d.map(p=>x(p.t)+','+y(p.d)).join(' ');
+    body.innerHTML=`<svg id="leadsvg" viewBox="0 0 ${W} ${H}">
+      <line x1="30" y1="${H/2}" x2="${W-30}" y2="${H/2}" stroke="rgba(255,255,255,.25)"/>
+      <text x="${W-24}" y="${y(max)+6}" fill="${C.A}" font-size="15" font-family="Barlow Condensed">+${max} ${S.teams.A.short}</text>
+      <text x="${W-24}" y="${y(-max)+6}" fill="${C.B}" font-size="15" font-family="Barlow Condensed">+${max} ${S.teams.B.short}</text>
+      <polyline points="${pts}" fill="none" stroke="var(--gold)" stroke-width="4" stroke-linejoin="round"/></svg>`;break}
+   case 'rosterA': case 'rosterB':{
+    const tm=curGfx==='rosterA'?'A':'B',col=tm==='A'?C.A:C.B;
+    head(S.teams[tm].name||'',T.roster);
+    const pls=Object.values(S.players||{}).filter(p=>p.team===tm&&!p.off).sort((a,b)=>(a.jersey||99)-(b.jersey||99));
+    const off=(S.officials&&S.officials[tm])||[];
+    body.innerHTML=`<div class="cols2"><table class="tbl">${pls.slice(0,Math.ceil(pls.length/2)).map(rr).join('')}</table>
+      <table class="tbl">${pls.slice(Math.ceil(pls.length/2)).map(rr).join('')}
+      <tr><th colspan="2">${T.officials}</th></tr>${off.map(o=>`<tr><td><span class="jer">${o.jersey}</span>${o.name}</td><td></td></tr>`).join('')}</table></div>`;
+    function rr(p){return `<tr><td><span class="jer" style="background:${col}">${p.jersey}</span>${p.name}${p.gk?' 🧤':''}</td><td></td></tr>`}
+    break}
+   case 'htft':{
+    const fin=S.period==='13';
+    head(fin?T.ftP:(S.period==='2'?T.htP:T.live),'');
+    body.innerHTML=`<div class="htft">
+      <div class="nm" style="color:${C.A}">${A.name||''}</div>
+      <div><div class="bigsc">${S.score.a} : ${S.score.b}</div>${S.ht?`<div class="htsc">(${T.htP}: ${S.ht.a} : ${S.ht.b})</div>`:''}</div>
+      <div class="nm" style="color:${C.B}">${B.name||''}</div></div>`;break}
+  }
+}
+function grow(body){requestAnimationFrame(()=>requestAnimationFrame(()=>{body.querySelectorAll('.bar i').forEach(i=>{const w=i.style.width;i.style.width=w})}))}
+</script>
+</body>
+</html>
