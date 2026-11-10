@@ -1,0 +1,57 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "rooms": {
+      "$room": {
+        ".read": true,
+        ".write": "auth != null && $room.matches(/^[a-z0-9_-]{1,60}$/)",
+        "state": {
+          ".validate": "newData.hasChildren()"
+        },
+        "info": {
+          "comp": { ".validate": "newData.isString() && newData.val().length <= 80" },
+          "venue": { ".validate": "newData.isString() && newData.val().length <= 80" },
+          "$other": { ".validate": false }
+        },
+        "colors": {
+          "A": { ".validate": "newData.isString() && newData.val().matches(/^#[0-9a-fA-F]{6}$/)" },
+          "B": { ".validate": "newData.isString() && newData.val().matches(/^#[0-9a-fA-F]{6}$/)" },
+          "$other": { ".validate": false }
+        },
+        "display": {
+          "bug": { ".validate": "newData.isBoolean()" },
+          "visible": { ".validate": "newData.isBoolean()" },
+          "graphic": { ".validate": "newData.isString() && newData.val().length <= 20" },
+          "lang": { ".validate": "newData.isString() && (newData.val() === 'hu' || newData.val() === 'en')" },
+          "autoFlash": { ".validate": "newData.isBoolean()" },
+          "opacity": { ".validate": "newData.isNumber() && newData.val() >= 20 && newData.val() <= 100" },
+          "clockOn": { ".validate": "newData.isBoolean()" },
+          "clockHold": {
+            "sec": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 20000" },
+            "ts": { ".validate": "newData.isNumber()" },
+            "$other": { ".validate": false }
+          },
+          "flash": {
+            "uuid": { ".validate": "newData.isString() && newData.val().length <= 80" },
+            "ts": { ".validate": "newData.isNumber()" },
+            "$other": { ".validate": false }
+          },
+          "car": {
+            ".validate": "newData.hasChildren(['list', 'ts'])",
+            "list": { "$i": { ".validate": "newData.isString() && newData.val().length <= 20" } },
+            "interval": { ".validate": "newData.isNumber() && newData.val() >= 4000 && newData.val() <= 120000" },
+            "cycles": { ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 50" },
+            "loop": { ".validate": "newData.isBoolean()" },
+            "hold": { ".validate": "newData.isBoolean()" },
+            "ts": { ".validate": "newData.isNumber()" },
+            "$other": { ".validate": false }
+          },
+          "ts": { ".validate": "newData.isNumber()" },
+          "$other": { ".validate": false }
+        },
+        "$other": { ".validate": false }
+      }
+    }
+  }
+}

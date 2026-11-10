@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Export — MKSZ Live Overlay</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@500;600;700&family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,800&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+body{margin:0;background:#EDF1F5;color:#1F2630;font:15px/1.5 Barlow,system-ui,sans-serif;padding:14px;text-align:center}
+canvas{max-width:100%;height:auto;border-radius:10px;border:1px solid #D9DFE6;background:#fff}
+.bar{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:12px 0}
+button{background:#1FB768;color:#fff;border:0;border-radius:9px;font:800 15px "Barlow Condensed";text-transform:uppercase;letter-spacing:.08em;padding:11px 18px;cursor:pointer}
+button.sec{background:#1F2630;color:#fff;border:1px solid #1F2630}
+#st{color:#66727F;font-size:13px;min-height:20px}
+</style>
+</head>
+<body>
+<div class="bar">
+  <button onclick="save()">⬇ Letöltés / Download PNG</button>
+  <button class="sec" onclick="load()">↻ Frissítés / Refresh</button>
+</div>
+<div id="st">Betöltés… / Loading…</div>
+<canvas id="cv" width="1280" height="720"></canvas>
+<script>
+/* Same public config as control.html / output.html. */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCeRdAoy5pGwQIKOVBqofQga2JDu_igxD4",
+  authDomain: "kezilabda-overlay.firebaseapp.com",
+  databaseURL: "https://kezilabda-overlay-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "kezilabda-overlay",
+  storageBucket: "kezilabda-overlay.firebasestorage.app",
+  messagingSenderId: "192515688626",
+  appId: "1:192515688626:web:e83d1ea00007456beb21ab"
+};
+const Q=new URLSearchParams(location.search);
+const room=(Q.get('room')||'default').toLowerCase().replace(/[^a-z0-9_-]/g,'-').slice(0,60);
+const kind=Q.get('kind')==='stats'?'stats':'thumb';
+const cv=document.getElementById('cv'),cx=cv.getContext('2d');
+const st=t=>document.getElementById('st').textContent=t;
+const num=v=>Number(v)||0, str=v=>v==null?'':String(v);
+const color=(v,d)=>/^#[0-9a-fA-F]{6}$/.test(v||'')?v:d;
+const CF='"Barlow Condensed",sans-serif';
+const DEF={A:'#F93154',B:'#1FB768'},NAVY='#1F2630',MUT='#66727F',ACC='#12994F';
+let S=null,C={A:DEF.A,B:DEF.B},I={},lang='hu',LG={A:null,B:null};
+const L={hu:{live:'ÉLŐ',ft:'VÉGEREDMÉNY',ht:'félidő',shots:'LÖVÉSEK',eff:'HATÉKONYSÁG',g7:'HÉTMÉTERES',saves:'VÉDÉSEK',to:'ELADOTT LABDÁK',two:'KIÁLLÍTÁS (2 PERC)',yel:'SÁRGA LAP',scorers:'GÓLLÖVŐK',src:'Adatok: MKSZ livescore'},
+         en:{live:'LIVE',ft:'FULL-TIME',ht:'half-time',shots:'SHOTS',eff:'EFFICIENCY',g7:'7-METRE THROWS',saves:'SAVES',to:'TURNOVERS',two:'2-MIN SUSPENSIONS',yel:'YELLOW CARDS',scorers:'TOP SCORERS',src:'Data: MKSZ livescore'}};
+
+firebase.initializeApp(FIREBASE_CONFIG);
+const ready=firebase.auth().signInAnonymously();
+async function load(){
+  try{
+    await ready;
+    const v=(await firebase.database().ref('rooms/'+room).get()).val()||{};
+    S=v.state||null; I=v.info||{}; lang=v.display&&v.display.lang==='en'?'en':'hu';
+    C={A:color(v.colors&&v.colors.A,DEF.A),B:color(v.colors&&v.colors.B,DEF.B)};
+    if(!S||!S.teams){st('Nincs meccsadat ebben a szobában. / No match data in this room.');return}
+    st('Címerek betöltése… / Loading crests…');
+    await Promise.all([document.fonts.load('800 80px "Barlow Condensed"'),document.fonts.load('italic 800 80px "Barlow Condensed"'),document.fonts.load('600 30px Barlow'),
+      crest(S.teams.A&&S.teams.A.logo).then(i=>LG.A=i),crest(S.teams.B&&S.teams.B.logo).then(i=>LG.B=i)]);
+    kind==='stats'?drawStats():drawThumb();
+    st((LG.A&&LG.B)?'Kész. / Ready.':'Kész — a címer nem tölthető be a képbe, monogram került a helyére. / Ready — a crest could not be loaded into the image, initials are used instead.');
+  }catch(e){st('Hiba / Error: '+e.message)}
+}
+/* A crest can only go on the canvas if its server allows cross-origin use; otherwise the canvas could
+   not be saved. Try the source directly, then a public image proxy, then fall back to initials. */
+function img(u){return new Promise(r=>{const i=new Image();i.crossOrigin='anonymous';i.onload=()=>r(i);i.onerror=()=>r(null);i.src=u})}
+async function crest(u){
+  if(!/^https:\/\/[^\s"'<>]+$/.test(u||''))return null;
+  return (await img(u))||(await img('https://images.weserv.nl/?url='+encodeURIComponent(u.replace(/^https:\/\//,'ssl:'))+'&output=png'));
+}
+function save(){
+  if(!S)return;
+  const n=s=>str(s).normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Za-z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase();
+  cv.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);
+    a.download=kind+'-'+n(S.teams.A.short)+'-'+n(S.teams.B.short)+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),5000)},'image/png');
+}
+
+/* ---------- drawing helpers ---------- */
+const info=()=>({comp:str(I.comp||S.meta&&S.meta.competition).trim(),venue:str(I.venue||S.meta&&S.meta.venue).trim(),age:str(S.meta&&S.meta.age).trim(),
+  date:S.meta&&num(S.meta.ts)?new Date(num(S.meta.ts)).toLocaleDateString(lang==='en'?'en-GB':'hu-HU',{year:'numeric',month:'long',day:'numeric'}):''});
+function text(t,x,y,size,o){o=o||{};t=str(t);let s=size;
+  const f=z=>`${o.italic?'italic ':''}${o.weight||800} ${z}px ${o.font||CF}`;
+  cx.font=f(s); if(o.max)while(s>12&&cx.measureText(t).width>o.max){s-=2;cx.font=f(s)}
+  cx.textAlign=o.align||'center';cx.textBaseline=o.base||'middle';cx.fillStyle=o.color||'#fff';
+  if(o.shadow){cx.shadowColor='rgba(0,0,0,.6)';cx.shadowBlur=o.shadow;cx.shadowOffsetY=3}
+  cx.fillText(t,x,y);cx.shadowColor='transparent';cx.shadowBlur=0;cx.shadowOffsetY=0;return s}
+function rrect(x,y,w,h,r){cx.beginPath();cx.roundRect(x,y,w,h,r)}
+function shadeOf(hex,f){const n=parseInt(hex.slice(1),16),c=[n>>16&255,n>>8&255,n&255].map(v=>Math.round(v*f));return `rgb(${c[0]},${c[1]},${c[2]})`}
+function chip(tm,x,y,size){           // white tile with the crest, or the team's initials
+  cx.save();cx.shadowColor='rgba(0,0,0,.45)';cx.shadowBlur=30;cx.shadowOffsetY=10;cx.fillStyle='#fff';rrect(x-size/2,y-size/2,size,size,size*.14);cx.fill();cx.restore();
+  cx.strokeStyle='rgba(31,38,48,.12)';cx.lineWidth=2;rrect(x-size/2,y-size/2,size,size,size*.14);cx.stroke();
+  const im=LG[tm];
+  if(im){const pad=size*.1,box=size-2*pad,k=Math.min(box/im.width,box/im.height),w=im.width*k,h=im.height*k;cx.drawImage(im,x-w/2,y-h/2,w,h)}
+  else{const ini=str(S.teams[tm].short||S.teams[tm].name).split(/\s+/).filter(Boolean).slice(0,3).map(w=>w[0]).join('').toUpperCase();
+    text(ini,x,y+size*.03,size*.42,{color:tm==='A'?C.A:C.B,max:size*.8})}
+}
+function split(W,H){                  // diagonal two-colour background
+  cx.fillStyle=C.B;cx.fillRect(0,0,W,H);
+  let g=cx.createLinearGradient(W,0,W/2,H);g.addColorStop(0,C.B);g.addColorStop(1,shadeOf(C.B,.45));cx.fillStyle=g;cx.fillRect(0,0,W,H);
+  cx.beginPath();cx.moveTo(0,0);cx.lineTo(W*.58,0);cx.lineTo(W*.42,H);cx.lineTo(0,H);cx.closePath();
+  g=cx.createLinearGradient(0,0,W/2,H);g.addColorStop(0,C.A);g.addColorStop(1,shadeOf(C.A,.45));cx.fillStyle=g;cx.fill();
+  cx.beginPath();cx.moveTo(W*.58-10,0);cx.lineTo(W*.58+10,0);cx.lineTo(W*.42+10,H);cx.lineTo(W*.42-10,H);cx.closePath();cx.fillStyle=NAVY;cx.fill();
+}
+const started=()=>num(S.events)>0, fin=()=>!!S.finished;
+
+/* ---------- YouTube thumbnail, 1280×720 ---------- */
+function drawThumb(){
+  const W=cv.width=1280,H=cv.height=720,T=L[lang],m=info();
+  split(W,H);
+  let g=cx.createLinearGradient(0,0,0,H);g.addColorStop(0,'rgba(0,0,0,.55)');g.addColorStop(.3,'rgba(0,0,0,0)');g.addColorStop(.7,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,.7)');
+  cx.fillStyle=g;cx.fillRect(0,0,W,H);
+  if(m.comp)text(m.comp.toUpperCase(),W/2,58,44,{max:W-420,shadow:12});
+  chip('A',300,300,290);chip('B',W-300,300,290);
+  text(str(S.teams.A.short).toUpperCase(),300,530,84,{max:520,shadow:16});
+  text(str(S.teams.B.short).toUpperCase(),W-300,530,84,{max:520,shadow:16});
+  // centre plate: final score, or VS before/during the match
+  cx.save();cx.translate(W/2,300);cx.transform(1,0,-0.2,1,0,0);cx.fillStyle=NAVY;rrect(-150,-92,300,184,14);cx.fill();
+  cx.fillStyle='#35DE8A';cx.fillRect(-150,86,300,6);cx.restore();
+  if(fin()){text(num(S.score.a)+' : '+num(S.score.b),W/2,292,118,{italic:true,max:260});}
+  else text('VS',W/2,296,128,{italic:true,color:'#35DE8A'});
+  const tag=fin()?T.ft:T.live;
+  cx.font=`800 34px ${CF}`;const tw=cx.measureText(tag).width+44;
+  cx.fillStyle=fin()?NAVY:'#F93154';rrect(W/2-tw/2,418,tw,54,8);cx.fill();text(tag,W/2,446,34,{});
+  const foot=[m.date,m.venue].filter(Boolean).join('  ·  ');
+  if(foot)text(foot,W/2,H-52,38,{weight:700,max:W-120,shadow:10});
+}
+
+/* ---------- post-match statistics image, 1920×1080 ---------- */
+function drawStats(){
+  const W=cv.width=1920,H=cv.height=1080,T=L[lang],m=info(),sa=S.stats&&S.stats.A||{},sb=S.stats&&S.stats.B||{},pa=S.pens&&S.pens.A||{},pb=S.pens&&S.pens.B||{};
+  let g=cx.createLinearGradient(0,0,W,H);g.addColorStop(0,'#FFFFFF');g.addColorStop(1,'#E9EEF3');cx.fillStyle=g;cx.fillRect(0,0,W,H);
+  cx.fillStyle=C.A;cx.fillRect(0,0,W/2,14);cx.fillStyle=C.B;cx.fillRect(W/2,0,W/2,14);
+  const head=[m.comp,m.age].filter(Boolean).join(' · ');
+  if(head)text(head.toUpperCase(),W/2,62,34,{weight:700,color:MUT,max:W-200});
+  chip('A',170,205,190);chip('B',W-170,205,190);
+  text(str(S.teams.A.short).toUpperCase(),300,205,82,{align:'left',max:470,color:NAVY});
+  text(str(S.teams.B.short).toUpperCase(),W-300,205,82,{align:'right',max:470,color:NAVY});
+  text(num(S.score.a)+' : '+num(S.score.b),W/2,195,170,{italic:true,max:330,color:NAVY});
+  const sub=(fin()?T.ft:T.live)+(S.ht?'  ·  '+T.ht+' '+num(S.ht.a)+' : '+num(S.ht.b):'');
+  text(sub.toUpperCase(),W/2,300,30,{weight:700,color:ACC});
+  const pct=(a,b)=>num(b)?Math.round(100*num(a)/num(b)):0;
+  const rows=[[T.shots,num(sa.shots),num(sb.shots),num(sa.goals)+' / '+num(sa.shots),num(sb.goals)+' / '+num(sb.shots)],
+    [T.eff,pct(sa.goals,sa.shots),pct(sb.goals,sb.shots),pct(sa.goals,sa.shots)+'%',pct(sb.goals,sb.shots)+'%'],
+    [T.g7,num(sa.a7),num(sb.a7),num(sa.g7)+' / '+num(sa.a7),num(sb.g7)+' / '+num(sb.a7)],
+    [T.saves,num(sa.saves),num(sb.saves),num(sa.saves)+' / '+num(sa.faced),num(sb.saves)+' / '+num(sb.faced)],
+    [T.to,num(sa.to),num(sb.to)],[T.two,num(pa.s2),num(pb.s2)],[T.yel,num(pa.y),num(pb.y)]];
+  let y=390;const bw=470;
+  rows.forEach(([lab,a,b,fa,fb])=>{const tot=(a+b)||1;
+    text(fa==null?a:fa,300,y,56,{align:'right',max:210,color:NAVY});text(fb==null?b:fb,W-300,y,56,{align:'left',max:210,color:NAVY});
+    text(lab,W/2,y,28,{weight:700,color:MUT});
+    cx.fillStyle='rgba(31,38,48,.10)';rrect(330,y-9,bw,18,9);cx.fill();rrect(W-330-bw,y-9,bw,18,9);cx.fill();
+    cx.fillStyle=C.A;const wa=bw*a/tot;if(wa>0){rrect(330+bw-wa,y-9,wa,18,9);cx.fill()}
+    cx.fillStyle=C.B;const wb=bw*b/tot;if(wb>0){rrect(W-330-bw,y-9,wb,18,9);cx.fill()}
+    y+=72});
+  // top scorers
+  y+=6;text(T.scorers,W/2,y,28,{weight:700,color:ACC});
+  const top=tm=>Object.values(S.players||{}).filter(p=>p.team===tm&&num(p.goals)>0).sort((a,b)=>num(b.goals)-num(a.goals)||num(a.shots)-num(b.shots)).slice(0,3);
+  const line=p=>str(p.name)+'  '+num(p.goals)+' / '+num(p.shots);
+  top('A').forEach((p,i)=>text(line(p),120,y+i*42,32,{align:'left',weight:600,font:'Barlow,sans-serif',max:760,color:NAVY}));
+  top('B').forEach((p,i)=>text(line(p),W-120,y+i*42,32,{align:'right',weight:600,font:'Barlow,sans-serif',max:760,color:NAVY}));
+  const foot=[m.date,m.venue,T.src].filter(Boolean).join('  ·  ');
+  text(foot,W/2,H-34,24,{weight:600,color:MUT,font:'Barlow,sans-serif',max:W-200});
+}
+load();
+</script>
+</body>
+</html>

@@ -8,52 +8,74 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="feed.js"></script>
+<script src="demo.js"></script>
 <style>
-:root{--bg:#101418;--panel:#1A2129;--panel2:#212A34;--ink:#F5F7FA;--mut:#8B98A5;--acc:#FFB800;--ok:#43D17C;--err:#FF5A5A;--line:#2C3742}
+/* palette of the MKSZ livescore page: light grey page, white cards, navy, green and red */
+:root{--bg:#EDF1F5;--panel:#FFFFFF;--panel2:#F3F6F9;--ink:#1F2630;--mut:#66727F;--acc:#1FB768;--ok:#12994F;--err:#F93154;--line:#D9DFE6;--navy:#1F2630}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--ink);font:15px/1.5 Barlow,system-ui,sans-serif;padding:14px;max-width:760px;margin:0 auto}
 h1{font:800 22px "Barlow Condensed";text-transform:uppercase;letter-spacing:.05em;transform:skewX(-6deg);display:inline-block}
-.tag{font:700 12px "Barlow Condensed";letter-spacing:.15em;color:var(--acc);text-transform:uppercase}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin:10px 0}
+.tag{font:700 12px "Barlow Condensed";letter-spacing:.15em;color:var(--ok);text-transform:uppercase}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin:10px 0;box-shadow:0 1px 2px rgba(31,38,48,.05)}
 input[type=text]{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:9px;color:var(--ink);font:500 15px Barlow;padding:11px 12px;outline:none}
 input[type=text]:focus{border-color:var(--acc)}
-.btn{background:var(--acc);color:#181000;border:0;border-radius:9px;font:800 15px "Barlow Condensed";text-transform:uppercase;letter-spacing:.08em;padding:11px 16px;cursor:pointer}
-.btn.sec{background:var(--panel2);color:var(--ink);border:1px solid var(--line)}
+input[type=number]{width:74px;background:var(--panel2);border:1px solid var(--line);border-radius:9px;color:var(--ink);font:500 15px Barlow;padding:9px 10px;outline:none}
+input[type=range]{width:100%;accent-color:var(--acc)}
+.btn{background:var(--acc);color:#fff;border:0;border-radius:9px;font:800 15px "Barlow Condensed";text-transform:uppercase;letter-spacing:.08em;padding:11px 16px;cursor:pointer}
+.btn.sec{background:var(--navy);color:#fff;border:1px solid var(--navy)}
+.btn.sec.on{background:var(--acc);color:#fff;border-color:var(--acc)}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 #status{font:600 13px Barlow;padding:5px 10px;border-radius:99px;background:var(--panel2);color:var(--mut)}
-#status.on{background:#123B26;color:var(--ok)}#status.err{background:#3B1212;color:var(--err)}
+#status.on{background:#DDF5E8;color:var(--ok)}#status.err{background:#FEE0E6;color:var(--err)}
 .preview{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .pteam{flex:1;min-width:0}.pteam b{display:block;font:700 15px "Barlow Condensed";text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pteam small{color:var(--mut)}
 .pscore{font:800 34px "Barlow Condensed";white-space:nowrap}
 .pmeta{text-align:center;color:var(--mut);font-size:12px}
+.meta{color:var(--mut);font-size:12px;text-align:center;margin-top:6px;min-height:16px}
 .ticker{color:var(--mut);font-size:13px;margin-top:8px;border-top:1px solid var(--line);padding-top:8px;min-height:18px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
 .gbtn{background:var(--panel2);border:1px solid var(--line);border-radius:10px;color:var(--ink);font:700 14px "Barlow Condensed";text-transform:uppercase;letter-spacing:.05em;padding:16px 10px;cursor:pointer;text-align:left;position:relative}
 .gbtn small{display:block;font:500 11px Barlow;color:var(--mut);text-transform:none;letter-spacing:0;margin-top:3px}
-.gbtn.live{border-color:var(--acc);background:#2B2410}
-.gbtn.live::after{content:"ADÁSBAN";position:absolute;top:7px;right:8px;font:800 9px "Barlow Condensed";letter-spacing:.1em;color:#181000;background:var(--acc);padding:2px 6px;border-radius:4px}
+.gbtn kbd{position:absolute;bottom:6px;right:8px;font:700 10px Barlow;color:var(--mut);border:1px solid var(--line);border-radius:4px;padding:0 5px;background:var(--panel)}
+.gbtn.live{border-color:var(--acc);background:#E3F7EC;box-shadow:0 0 0 1px var(--acc) inset}
+.gbtn.live::after{content:"ADÁSBAN";position:absolute;top:7px;right:8px;font:800 9px "Barlow Condensed";letter-spacing:.1em;color:#fff;background:var(--acc);padding:2px 6px;border-radius:4px}
 .split{display:flex;gap:8px;flex-wrap:wrap}.split>*{flex:1;min-width:130px}
 label.mini{font:600 11px Barlow;color:var(--mut);text-transform:uppercase;letter-spacing:.07em;display:block;margin-bottom:4px}
 .sw{display:flex;background:var(--panel2);border:1px solid var(--line);border-radius:9px;overflow:hidden}
 .sw button{flex:1;background:none;border:0;color:var(--mut);font:700 13px "Barlow Condensed";text-transform:uppercase;padding:9px;cursor:pointer}
-.sw button.on{background:var(--acc);color:#181000}
+.sw button.on{background:var(--acc);color:#fff}
 input[type=color]{width:100%;height:38px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);padding:3px;cursor:pointer}
 h2{font:700 15px "Barlow Condensed";text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin-bottom:8px}
-.warn{background:#3B2A0E;border:1px solid #6b4d14;border-radius:10px;padding:10px 12px;font-size:13px;color:#FFD98A;margin:10px 0;display:none}
+.warn{background:#FFF4D6;border:1px solid #F0D48A;border-radius:10px;padding:10px 12px;font-size:13px;color:#7A5B00;margin:10px 0;display:none}
+.chk{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.chk label{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font:600 13px Barlow;cursor:pointer;display:flex;gap:6px;align-items:center}
+.chk input{accent-color:var(--acc)}
+.hint{color:var(--mut);font-size:12px;margin-top:8px}
+textarea{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:9px;color:var(--ink);font:500 14px/1.45 Barlow;padding:10px 12px;outline:none;resize:vertical}
+#ytBox{display:none;margin-top:12px}#ytBox .btn{margin:6px 0 12px}
+@media (max-width:520px){.gbtn kbd{display:none}}
 </style>
 </head>
 <body>
 <div class="tag">MKSZ Live Overlay</div>
 <div class="row" style="justify-content:space-between"><h1>Vezérlő / Control</h1><span id="status">nincs kapcsolat</span></div>
-<div class="warn" id="cfgwarn">⚠ A Firebase konfiguráció még nincs beállítva a fájl tetején (FIREBASE_CONFIG). A grafikák a kimeneten csak beállítás után jelennek meg.</div>
+<div class="warn" id="warn"></div>
 
 <div class="card">
   <h2>Mérkőzés / Match</h2>
   <div class="row">
     <input type="text" id="mlink" placeholder="https://livescore.mksz.hu/32021351777/esemenyek — link vagy meccs-azonosító" style="flex:1;min-width:220px">
     <button class="btn" id="connBtn" onclick="connectMatch()">Kapcsolódás</button>
+    <button class="btn sec" id="demoBtn" onclick="startDemo()" title="Kitalált meccs a grafikák kipróbálásához / Invented match to try the graphics">Demó</button>
   </div>
+  <div class="split" style="margin-top:10px">
+    <div><label class="mini">Bajnokság / Competition</label><input type="text" id="iComp" maxlength="80" onchange="pushInfo()"></div>
+    <div><label class="mini">Helyszín / Venue</label><input type="text" id="iVenue" maxlength="80" onchange="pushInfo()"></div>
+  </div>
+  <div class="hint">A meccs előtti panelen, az indexképen és a YouTube-szövegben jelenik meg. Üresen hagyva az élő adatból jön, ha az tartalmazza. /
+    Shown on the pre-match panel, the thumbnail and the YouTube text. Left empty, the feed's value is used when it has one.</div>
 </div>
 
 <div class="card">
@@ -63,6 +85,7 @@ h2{font:700 15px "Barlow Condensed";text-transform:uppercase;letter-spacing:.08e
     <div style="text-align:center"><div class="pscore"><span id="pSA">0</span>:<span id="pSB">0</span></div><div class="pmeta"><span id="pClock">00:00</span> · <span id="pPer">—</span></div></div>
     <div class="pteam" style="text-align:right"><b id="pB">—</b><small id="pBx"></small></div>
   </div>
+  <div class="meta" id="pMeta"></div>
   <div class="ticker" id="ticker">Várakozás az adatokra… / Waiting for data…</div>
 </div>
 
@@ -73,24 +96,72 @@ h2{font:700 15px "Barlow Condensed";text-transform:uppercase;letter-spacing:.08e
       <div class="sw"><button id="lhu" class="on" onclick="setLang('hu')">Magyar</button><button id="len" onclick="setLang('en')">English</button></div></div>
     <div><label class="mini">Gólvillanás automatikusan / Auto goal flash</label>
       <div class="sw"><button id="afOn" class="on" onclick="setAuto(true)">Be</button><button id="afOff" onclick="setAuto(false)">Ki</button></div></div>
-    <div><label class="mini">Hazai szín / Home color</label><input type="color" id="colA" value="#D6001C" onchange="pushColors()"></div>
-    <div><label class="mini">Vendég szín / Away color</label><input type="color" id="colB" value="#0057B8" onchange="pushColors()"></div>
+    <div><label class="mini">Hazai szín / Home color</label><input type="color" id="colA" value="#F93154" onchange="pushColors()"></div>
+    <div><label class="mini">Vendég szín / Away color</label><input type="color" id="colB" value="#1FB768" onchange="pushColors()"></div>
   </div>
+  <div class="split" style="margin-top:10px">
+    <div><label class="mini">Átlátszóság / Opacity — <span id="opv">100</span>%</label>
+      <input type="range" id="op" min="20" max="100" step="5" value="100" oninput="setOpacity(this.value)"></div>
+    <div><label class="mini">Óra / Clock</label>
+      <div class="row"><button class="btn sec" id="holdBtn" style="flex:1" onclick="toggleHold()">⏸ Megállít / Hold</button>
+      <button class="btn sec" id="clkBtn" style="flex:1" onclick="toggleClock()">Elrejt / Hide</button></div></div>
+  </div>
+  <div class="hint">Az élő adat nem jelzi az óra megállítását: az óra az utolsó eseménytől fut tovább, időkérésnél megáll, és a következő eseménynél újra igazodik. /
+    The feed has no clock stop signal: the clock runs on from the last event, holds on a time-out and re-syncs on the next event.</div>
 </div>
 
 <div class="card">
   <h2>Grafikák / Graphics</h2>
   <div class="grid" id="ggrid"></div>
   <div class="row" style="margin-top:10px">
-    <button class="btn sec" style="flex:1" onclick="hideAll()">Minden panel le / Hide panels</button>
+    <button class="btn sec" style="flex:1" onclick="replayFlash()">Gól újra / Replay goal <small>(G)</small></button>
+    <button class="btn sec" style="flex:1" onclick="hideAll()">Minden panel le / Hide panels <small>(Esc)</small></button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Körhinta / Carousel</h2>
+  <div class="row">
+    <button class="btn sec" data-pre="pre" onclick="applyPreset('pre')">1 · Meccs előtt</button>
+    <button class="btn sec" data-pre="ht" onclick="applyPreset('ht')">2 · Szünet</button>
+    <button class="btn sec" data-pre="ft" onclick="applyPreset('ft')">3 · Vége</button>
+  </div>
+  <div class="chk" id="carList"></div>
+  <div class="row">
+    <label class="mini" style="margin:0">mp / panel</label><input type="number" id="carSec" min="4" max="120" value="12">
+    <label class="mini" style="margin:0">kör / cycles</label><input type="number" id="carCyc" min="1" max="50" value="1">
+    <span class="chk" style="margin:0"><label><input type="checkbox" id="carLoop">Végtelen / Loop</label></span>
+    <span class="chk" style="margin:0"><label><input type="checkbox" id="carHold">Utolsó marad / Hold last</label></span>
+  </div>
+  <div class="row" style="margin-top:10px">
+    <button class="btn" id="carStart" style="flex:1" onclick="startCarousel()">▶ Indítás / Start</button>
+    <button class="btn sec" style="flex:1" onclick="stopCarousel()">■ Stop</button>
+  </div>
+  <div class="hint">Az adat nélküli paneleket a körhinta kihagyja. / Panels with no data yet are skipped.</div>
+</div>
+
+<div class="card">
+  <h2>Export</h2>
+  <div class="row">
+    <button class="btn sec" style="flex:1" onclick="openExport('thumb')">🖼 YouTube indexkép / Thumbnail</button>
+    <button class="btn sec" style="flex:1" onclick="openExport('stats')">📊 Statisztika-kép / Stats image</button>
+    <button class="btn sec" style="flex:1" onclick="ytGen()">📋 YouTube szöveg / Text</button>
+  </div>
+  <div id="ytBox">
+    <label class="mini">Cím / Title <span id="ytLen"></span></label>
+    <textarea id="ytTitle" rows="2"></textarea>
+    <button class="btn sec" onclick="copyText('ytTitle',this)">Másol / Copy</button>
+    <label class="mini">Leírás / Description</label>
+    <textarea id="ytDesc" rows="12"></textarea>
+    <button class="btn sec" onclick="copyText('ytDesc',this)">Másol / Copy</button>
+    <div class="hint">A szöveg a képernyő nyelvén készül, és a pillanatnyi állást tartalmazza: a meccs után generáld újra. /
+      Written in the on-air language from the current state: generate it again after the match.</div>
   </div>
 </div>
 
 <script>
 /* ================= FIREBASE CONFIG =================
-   Illeszd be ide a Firebase projekted web-konfigurációját
-   (Firebase console → Project settings → Your apps → Config).
-   Ugyanezt kell beilleszteni az output.html tetején is.  */
+   Public by design; access is controlled by database.rules.json. Same block as in output.html. */
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyCeRdAoy5pGwQIKOVBqofQga2JDu_igxD4",
   authDomain: "kezilabda-overlay.firebaseapp.com",
@@ -103,187 +174,256 @@ const FIREBASE_CONFIG = {
 /* =================================================== */
 const SOCKET_URL="https://livescore-socket.mksz.hu";
 const SOCKET_TOKEN="bYaM1HVU31Zv9BRy"; // a livescore.mksz.hu kliens nyilvános tokenje
+const HISTORY_MS=4000;                 // events in the first seconds after joining are the replayed history
 
-const room=new URLSearchParams(location.search).get('room')||'default';
-document.title='Vezérlő · '+room;
-
-let db=null, fbReady=false;
-if(FIREBASE_CONFIG.apiKey!=="PASTE_ME"){
-  firebase.initializeApp(FIREBASE_CONFIG);
-  firebase.auth().signInAnonymously().then(()=>{fbReady=true;db=firebase.database();pushColors();pushDisplay();}).catch(e=>fail('Firebase auth: '+e.message));
-}else{document.getElementById('cfgwarn').style.display='block'}
+const room=(new URLSearchParams(location.search).get('room')||'default').toLowerCase().replace(/[^a-z0-9_-]/g,'-').slice(0,60);
+document.title='Vezérlő · MKSZ';
+const $=id=>document.getElementById(id);
+const LS=(k,v)=>{try{if(v===undefined)return localStorage.getItem('mksz_'+k);localStorage.setItem('mksz_'+k,v)}catch(e){return null}};
 
 /* ---------- state ---------- */
-const S={matchId:null,teams:{A:{},B:{}},score:{a:0,b:0},ht:null,period:'1',periodText:'',periodLength:30,
- clock:{sec:0,running:false,at:Date.now()},stats:{A:z(),B:z()},gate:{A:Array(9).fill(0),B:Array(9).fill(0)},
- players:{},officials:{A:[],B:[]},gks:{A:null,B:null,saves:{}},emptyNet:{A:false,B:false},timeouts:{A:0,B:0},
- pens:{A:{y:0,s2:0,r:0,b:0},B:{y:0,s2:0,r:0,b:0}},timeline:[],lead:[],run:{team:null,n:0},lastGoal:null};
-function z(){return{goals:0,shots:0,g7:0,a7:0,post:0,miss:0,block:0,saved:0,to:0,saves:0}}
-const seen=new Set();
-const display={graphic:null,visible:false,lang:'hu',autoFlash:true,flash:null};
+let store=MKSZFeed.createStore(), S=MKSZFeed.build(store,null), matchId=null;
+const display={bug:false,graphic:null,lang:'hu',autoFlash:true,flash:null,opacity:100,clockOn:true,clockHold:null,car:null};
+let db=null, fbReady=false, lastFlashed=null;
 
-/* ---------- socket ---------- */
-let socket=null;
+/* ---------- firebase: adopt what is already on air, then only push changes ---------- */
+firebase.initializeApp(FIREBASE_CONFIG);
+firebase.auth().signInAnonymously().then(async()=>{
+  db=firebase.database();
+  const ref=db.ref('rooms/'+room);
+  try{
+    const [d,c,inf]=await Promise.all([ref.child('display').get(),ref.child('colors').get(),ref.child('info').get()]);
+    const dv=d.val(), cv=c.val(), iv=inf.val();
+    if(iv){$('iComp').value=String(iv.comp||'').slice(0,80);$('iVenue').value=String(iv.venue||'').slice(0,80)}
+    if(dv){ // a reload of this panel must not blank a running broadcast
+      ['bug','graphic','lang','autoFlash','opacity','clockOn','car'].forEach(k=>{if(dv[k]!==undefined)display[k]=dv[k]});
+      lastFlashed=dv.flash&&dv.flash.uuid||null; display.flash=dv.flash||null;
+    }
+    if(cv){if(isColor(cv.A))$('colA').value=cv.A;if(isColor(cv.B))$('colB').value=cv.B}
+  }catch(e){warn('Firebase olvasás / read: '+e.message)}
+  fbReady=true; syncUI(); pushColors(); pushDisplay(); if(matchId)pushState();
+}).catch(e=>warn('Firebase auth: '+e.message));
+const isColor=v=>typeof v==='string'&&/^#[0-9a-fA-F]{6}$/.test(v);
+function warn(t){const w=$('warn');w.textContent='⚠ '+t;w.style.display='block'}
+
+/* ---------- feed ---------- */
+let socket=null, joinedAt=0, demoTimer=null, buildTimer=null;
+function resetMatch(id){
+  if(socket){socket.disconnect();socket=null}
+  if(demoTimer){clearInterval(demoTimer);demoTimer=null}
+  store=MKSZFeed.createStore(); matchId=id; lastFlashed=null; S=MKSZFeed.build(store,id); render();
+  // nothing is pushed yet: what is on air stays until the new match's data arrives
+}
 function connectMatch(){
-  const v=document.getElementById('mlink').value.trim();
+  const v=$('mlink').value.trim();
   const m=v.match(/(\d{8,})/); if(!m){fail('Érvénytelen link / Invalid link');return}
-  const id=m[1]; S.matchId=id;
-  if(socket)socket.disconnect();
+  LS('link_'+room,v);
+  resetMatch(m[1]);
   setStatus('kapcsolódás…','');
   socket=io(SOCKET_URL,{transports:['websocket','polling'],auth:{token:SOCKET_TOKEN}});
-  socket.on('connect',()=>{socket.emit('join','Merkozes_0_'+id);setStatus('élő kapcsolat','on')});
+  socket.on('connect',()=>{joinedAt=Date.now();socket.emit('join','Merkozes_0_'+matchId);setStatus('élő kapcsolat','on')});
   socket.on('disconnect',()=>setStatus('megszakadt — újracsatlakozás…','err'));
   socket.on('connect_error',e=>fail('Socket: '+e.message));
-  socket.on('matchdata',onEvent);
+  socket.on('nodatafound',()=>fail('Nincs élő adat ehhez a meccshez / No live data for this match'));
+  const on=e=>onEvent(e,Date.now()-joinedAt>HISTORY_MS);
+  socket.on('matchdata',on); socket.on('data',on);
 }
-function setStatus(t,c){const s=document.getElementById('status');s.textContent=t;s.className=c}
+function startDemo(){
+  resetMatch('demo');
+  const all=MKSZDemo.makeDemoMatch(7);
+  let i=0;
+  while(i<all.length&&all[i]._t<=1200){onEvent(all[i],false);i++}     // first 20 minutes as history
+  setStatus('DEMÓ — kitalált adatok','on');
+  demoTimer=setInterval(()=>{ if(i>=all.length){clearInterval(demoTimer);demoTimer=null;return} onEvent(all[i++],true) },1500);
+}
+function setStatus(t,c){const s=$('status');s.textContent=t;s.className=c}
 function fail(t){setStatus(t,'err')}
 
-/* ---------- reducer ---------- */
-function onEvent(e){
-  if(!e||seen.has(e.UUID))return; seen.add(e.UUID);
-  const p=e.params||{};
-  if(p.isDraft===true||p.approved===false)return;
-  const T=p.selectedTeamId==='teamA'?'A':p.selectedTeamId==='teamB'?'B':null;
-  const O=T==='A'?'B':'A';
-  const tg=(e.totalGameTime!=null)?e.totalGameTime:null;
-  if(tg!=null){S.clock.sec=tg;S.clock.at=Date.now()}
-  switch(e.action){
-    case 'init':{
-      const q=p;
-      S.teams.A={id:q.team_a_id,name:q.team_a_name,short:q.team_a_shortname||q.team_a_name,logo:q.team_a_logo||''};
-      S.teams.B={id:q.team_b_id,name:q.team_b_name,short:q.team_b_shortname||q.team_b_name,logo:q.team_b_logo||''};
-      S.periodLength=q.period_length||30; S.periodsDef=q.periods||[];
-      const put=(arr,team,off)=> (arr||[]).forEach(pl=>{S.players[pl.id]={name:pl.name,jersey:pl.jersey??'',team,gk:!!pl.goalkeeper,off:!!off,goals:0,g7:0,shots:0}});
-      put(q.team_a_players,'A');put(q.team_a_players_entry,'A');put(q.team_b_players,'B');put(q.team_b_players_entry,'B');
-      S.officials.A=q.team_a_officials||[];S.officials.B=q.team_b_officials||[];
-      break}
-    case 'gol': case 'gol7m':{
-      if(!T)break;
-      if(p.teamScore){S.score.a=p.teamScore.teamA;S.score.b=p.teamScore.teamB}
-      const st=S.stats[T]; st.goals++; st.shots++;
-      if(e.action==='gol7m'){st.g7++;st.a7++}
-      const pl=S.players[p.selectedPlayer]; if(pl){pl.goals++;pl.shots++;if(e.action==='gol7m')pl.g7++}
-      if(p.selectedGateArea>=1&&p.selectedGateArea<=9)S.gate[T][p.selectedGateArea-1]++;
-      if(S.run.team===T)S.run.n++;else S.run={team:T,n:1};
-      S.lead.push({t:S.clock.sec,d:S.score.a-S.score.b});
-      S.lastGoal={uuid:e.UUID,team:T,player:pl?pl.name:'',jersey:pl?pl.jersey:'',score:{...S.score},sev:e.action==='gol7m'};
-      tl(e,T,pl);
-      if(display.autoFlash&&display.visible!==false){display.flash={uuid:e.UUID,ts:Date.now()};pushDisplay()}
-      break}
-    case 'vedett': case 'vedett7m':{
-      if(!T)break;
-      const st=S.stats[T]; st.shots++; st.saved++; if(e.action==='vedett7m')st.a7++;
-      const pl=S.players[p.selectedPlayer]; if(pl)pl.shots++;
-      S.stats[O].saves++;
-      const gk=p.otherTeamGoalKeeper&&p.otherTeamGoalKeeper.id; if(gk)S.gks.saves[gk]=(S.gks.saves[gk]||0)+1;
-      tl(e,T,pl); break}
-    case 'kapufa': case 'rontott': case 'blokkolt':{
-      if(!T)break;
-      const st=S.stats[T]; st.shots++;
-      st[e.action==='kapufa'?'post':e.action==='rontott'?'miss':'block']++;
-      const pl=S.players[p.selectedPlayer]; if(pl)pl.shots++;
-      tl(e,T,pl); break}
-    case 'eladott': case 'technikai':{
-      if(T)S.stats[T].to++;
-      tl(e,T,S.players[p.selectedPlayer]); break}
-    case 'timeOut':{
-      if(T&&p.usedTimeOuts!=null)S.timeouts[T]=p.usedTimeOuts;
-      tl(e,T,null); break}
-    case 'periodchange':{
-      S.period=String(p.period);
-      const def=(S.periodsDef||[]).find(x=>String(x.value)===S.period);
-      S.periodText=def?def.text:('Periódus '+S.period);
-      S.clock.running=def?def.type==='normal':false;
-      if(S.period==='2'&&S.ht==null)S.ht={...S.score};
-      break}
-    case 'playtime':{S.clock.running=!S.clock.running;S.clock.at=Date.now();break}
-    case 'gamedatachange':{
-      const n=p.name||'';
-      if(n==='team_a_actual_goalkeeper'||n==='team_b_actual_goalkeeper'){
-        const t=n.includes('_a_')?'A':'B'; const id=p.value&&p.value.id;
-        S.emptyNet[t]=(id===0); if(id)S.gks[t]=id;
-      } break}
-    default:{
-      // ismeretlen / nem tesztelt akciók (pl. lapok, kiállítás): számláló + idővonal a feed saját nevével
-      const a=(e.action||'').toLowerCase();
-      if(T){const pe=S.pens[T];
-        if(a.includes('sarga'))pe.y++; else if(a.includes('piros'))pe.r++;
-        else if(a.includes('kek'))pe.b++; else if(a.includes('kiall')||a.includes('2perc')||a==='ketperc')pe.s2++;}
-      tl(e,T,S.players[p.selectedPlayer]);
-    }
-  }
-  render(); pushState();
+function onEvent(e,live){
+  if(!MKSZFeed.ingest(store,e,Date.now(),live))return;
+  if(buildTimer)return;
+  buildTimer=setTimeout(rebuild,live?0:80);      // the history arrives as a burst: rebuild once
 }
-function tl(e,T,pl){
-  const nm=(e.params&&e.params.selectedAction&&e.params.selectedAction.actionName)||e.action;
-  S.timeline.unshift({t:e.params&&e.params.gameTime||'',team:T,act:e.action,name:nm,player:pl?pl.name:'',jersey:pl?pl.jersey:'',score:S.score.a+':'+S.score.b});
-  if(S.timeline.length>10)S.timeline.pop();
+function rebuild(){
+  buildTimer=null;
+  S=MKSZFeed.build(store,matchId);
+  const g=S.lastGoal;
+  if(g&&g.uuid!==lastFlashed){
+    lastFlashed=g.uuid;
+    if(g.live&&display.autoFlash){display.flash={uuid:g.uuid,ts:Date.now()};pushDisplay()}
+  }
+  if(display.clockHold){display.clockHold=null;pushDisplay();syncUI()}   // a new event re-syncs the clock
+  render(); pushState();
 }
 
 /* ---------- preview ---------- */
 function render(){
-  document.getElementById('pA').textContent=S.teams.A.short||'—';
-  document.getElementById('pB').textContent=S.teams.B.short||'—';
-  document.getElementById('pAx').textContent=`Lövés ${S.stats.A.goals}/${S.stats.A.shots} · 7m ${S.stats.A.g7}/${S.stats.A.a7} · TO ${S.timeouts.A}`;
-  document.getElementById('pBx').textContent=`Lövés ${S.stats.B.goals}/${S.stats.B.shots} · 7m ${S.stats.B.g7}/${S.stats.B.a7} · TO ${S.timeouts.B}`;
-  document.getElementById('pSA').textContent=S.score.a;
-  document.getElementById('pSB').textContent=S.score.b;
-  document.getElementById('pPer').textContent=S.periodText||('P'+S.period);
+  $('pA').textContent=S.teams.A.short||'—';
+  $('pB').textContent=S.teams.B.short||'—';
+  const x=T=>{const s=S.stats[T],p=S.pens[T];return `Lövés ${s.goals}/${s.shots} · 7m ${s.g7}/${s.a7} · TO ${S.timeouts[T]} · 2' ${p.s2}`};
+  $('pAx').textContent=x('A'); $('pBx').textContent=x('B');
+  $('pSA').textContent=S.score.a; $('pSB').textContent=S.score.b;
+  $('pPer').textContent=S.periodText||('P'+S.period);
+  $('pMeta').textContent=[matchInfo().comp,S.meta.age,matchInfo().venue].filter(Boolean).join(' · ');
+  $('iComp').placeholder=S.meta.competition||'';$('iVenue').placeholder=S.meta.venue||'';
   const t=S.timeline[0];
-  if(t)document.getElementById('ticker').textContent=`${t.t} — ${t.name}${t.player?' · '+t.player:''} (${t.score})`;
+  $('ticker').textContent=t?`${t.t} — ${t.name}${t.player?' · '+t.player:''} (${t.score})`:'Várakozás az adatokra… / Waiting for data…';
 }
-setInterval(()=>{ // helyi órajárás az előnézetben
+function clockNow(){
+  if(display.clockHold)return display.clockHold.sec;
   let s=S.clock.sec+(S.clock.running?(Date.now()-S.clock.at)/1000:0);
-  document.getElementById('pClock').textContent=mmss(s);
-},500);
-function mmss(s){s=Math.max(0,Math.floor(s));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
+  return S.clock.cap?Math.min(s,S.clock.cap):s;
+}
+setInterval(()=>{$('pClock').textContent=MKSZFeed.mmss(clockNow())},500);
 
-/* ---------- graphics buttons ---------- */
+/* ---------- graphics ---------- */
 const GFX=[
- ['bug','Eredményjelző','állandó sávscore + óra','toggle'],
- ['teamstats','Csapatstatisztika','lövések, 7m, védések, eladott'],
- ['shots','Lövéskimenetek','gól · kapufa · fölé · blokk · védve'],
- ['gate','Kapu-térkép','hová érkeztek a gólok (3×3)'],
- ['scorers','Góllövők','legjobb dobók, mindkét oldal'],
- ['gk','Kapusok','védések kapusonként'],
- ['run','Sorozat','ki visz éppen X–0-s szériát'],
- ['lead','Vezetés-grafikon','különbség az idő mentén'],
- ['rosterA','Kezdő / keret — Hazai','játékosok + stáb'],
- ['rosterB','Kezdő / keret — Vendég','játékosok + stáb'],
- ['htft','Félidő / Végeredmény','nagy eredménypanel'],
+ ['bug','Eredményjelző','állandó sáv: eredmény + óra','b'],
+ ['prematch','Meccs előtt','címerek, csapatok, helyszín','t'],
+ ['teamstats','Csapatstatisztika','lövések, 7m, védések, eladott','1'],
+ ['shots','Lövéskimenetek','gól · kapufa · mellé · blokk · védve','2'],
+ ['gate','Kapu-térkép','hová érkeztek a gólok (3×3)','3'],
+ ['shotmap','Lövéstérkép','honnan lőttek: gól / lövés zónánként','4'],
+ ['scorers','Góllövők','legjobb dobók, mindkét oldal','5'],
+ ['gk','Kapuspárbaj','védések / lövések, százalék','6'],
+ ['best','A mezőny legjobbjai','legjobb góllövő + kapus csapatonként','7'],
+ ['momentum','Lendület','leghosszabb és a futó gólsorozat','8'],
+ ['lead','Vezetés-grafikon','különbség az idő mentén','9'],
+ ['discipline','Fegyelmi','lapok és kiállítások','q'],
+ ['rosterA','Keret — Hazai','játékosok + stáb','w'],
+ ['rosterB','Keret — Vendég','játékosok + stáb','e'],
+ ['staff','Stáb','a két kispad vezetői','y'],
+ ['htft','Félidő / Végeredmény','nagy eredménypanel','r'],
 ];
-const grid=document.getElementById('ggrid');
-GFX.forEach(([id,name,sub])=>{
+const HOT={}; const grid=$('ggrid');
+GFX.forEach(([id,name,sub,key])=>{
+  HOT[key]=id;
   const b=document.createElement('button');b.className='gbtn';b.id='g_'+id;
-  b.innerHTML=name+'<small>'+sub+'</small>';
+  b.append(name); const sm=document.createElement('small');sm.textContent=sub;b.append(sm);
+  const k=document.createElement('kbd');k.textContent=key.toUpperCase();b.append(k);
   b.onclick=()=>toggle(id);grid.appendChild(b);
 });
 function toggle(id){
   if(id==='bug'){display.bug=!display.bug}
-  else{display.graphic=(display.graphic===id)?null:id}
-  display.visible=true;pushDisplay();paint();
+  else{display.graphic=(display.graphic===id&&!display.car)?null:id; display.car=null}
+  pushDisplay();syncUI();
 }
-function hideAll(){display.graphic=null;pushDisplay();paint()}
-function paint(){
-  GFX.forEach(([id])=>{const b=document.getElementById('g_'+id);
-    b.classList.toggle('live',id==='bug'?!!display.bug:display.graphic===id)});
+function hideAll(){display.graphic=null;display.car=null;pushDisplay();syncUI()}
+function replayFlash(){ if(!S.lastGoal)return; display.flash={uuid:S.lastGoal.uuid,ts:Date.now()};pushDisplay() }
+function setLang(l){display.lang=l;pushDisplay();syncUI()}
+function setAuto(v){display.autoFlash=v;pushDisplay();syncUI()}
+function setOpacity(v){display.opacity=Math.max(20,Math.min(100,Number(v)||100));$('opv').textContent=display.opacity;pushDisplay()}
+function toggleHold(){if(!display.clockHold&&!S.events)return;   // nothing to hold before a match is loaded
+  display.clockHold=display.clockHold?null:{sec:Math.floor(clockNow()),ts:Date.now()};pushDisplay();syncUI()}
+function toggleClock(){display.clockOn=!display.clockOn;pushDisplay();syncUI()}
+function syncUI(){
+  GFX.forEach(([id])=>$('g_'+id).classList.toggle('live',id==='bug'?!!display.bug:(!display.car&&display.graphic===id)));
+  $('lhu').classList.toggle('on',display.lang!=='en');$('len').classList.toggle('on',display.lang==='en');
+  $('afOn').classList.toggle('on',!!display.autoFlash);$('afOff').classList.toggle('on',!display.autoFlash);
+  $('op').value=display.opacity;$('opv').textContent=display.opacity;
+  $('holdBtn').classList.toggle('on',!!display.clockHold);
+  $('holdBtn').textContent=display.clockHold?'▶ Tovább / Resume':'⏸ Megállít / Hold';
+  $('clkBtn').classList.toggle('on',!display.clockOn);
+  $('clkBtn').textContent=display.clockOn?'Elrejt / Hide':'Mutat / Show';
+  $('carStart').textContent=display.car?'● Fut… / Running':'▶ Indítás / Start';
 }
-function setLang(l){display.lang=l;document.getElementById('lhu').classList.toggle('on',l==='hu');document.getElementById('len').classList.toggle('on',l==='en');pushDisplay()}
-function setAuto(v){display.autoFlash=v;document.getElementById('afOn').classList.toggle('on',v);document.getElementById('afOff').classList.toggle('on',!v);pushDisplay()}
+
+/* ---------- carousel ---------- */
+const CAR_PRESETS={
+  pre:{list:['prematch','rosterA','rosterB','staff'],cycles:1,loop:true,hold:false},
+  ht:{list:['htft','teamstats','scorers','gk','shotmap','shots','momentum','lead','discipline'],cycles:2,loop:false,hold:false},
+  ft:{list:['htft','teamstats','scorers','gk','best','shotmap','gate','lead','momentum','discipline'],cycles:1,loop:false,hold:true}
+};
+const CAR_ALL=GFX.map(g=>g[0]).filter(id=>id!=='bug');
+const gName=id=>(GFX.find(g=>g[0]===id)||[id,id])[1];
+function renderCarList(order,checked){
+  const box=$('carList');box.textContent='';
+  order.forEach(id=>{const l=document.createElement('label'),c=document.createElement('input');
+    c.type='checkbox';c.value=id;c.checked=checked.includes(id);l.append(c,gName(id));box.appendChild(l)});
+}
+function applyPreset(id){
+  const P=CAR_PRESETS[id];
+  renderCarList(P.list.concat(CAR_ALL.filter(v=>!P.list.includes(v))),P.list);
+  $('carCyc').value=P.cycles;$('carLoop').checked=P.loop;$('carHold').checked=P.hold;
+  document.querySelectorAll('[data-pre]').forEach(b=>b.classList.toggle('on',b.dataset.pre===id));
+}
+applyPreset('ht');
+function startCarousel(){
+  const list=[...document.querySelectorAll('#carList input:checked')].map(c=>c.value);
+  if(!list.length)return;
+  const clamp=(v,a,b,d)=>Math.max(a,Math.min(b,parseInt(v,10)||d));
+  display.car={list,interval:clamp($('carSec').value,4,120,12)*1000,cycles:clamp($('carCyc').value,1,50,1),
+    loop:$('carLoop').checked,hold:$('carHold').checked,ts:Date.now()};
+  display.graphic=null;pushDisplay();syncUI();
+}
+function stopCarousel(){hideAll()}
+
+/* ---------- hotkeys ---------- */
+document.addEventListener('keydown',e=>{
+  const t=e.target; if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable))return;
+  if(e.ctrlKey||e.metaKey||e.altKey)return;
+  const k=e.key.toLowerCase();
+  if(k==='0'||k==='escape'||k==='c'){hideAll();e.preventDefault()}
+  else if(k==='g'){replayFlash();e.preventDefault()}
+  else if(HOT[k]){toggle(HOT[k]);e.preventDefault()}
+});
 
 /* ---------- firebase push ---------- */
 let stTimer=null;
-function pushState(){ if(!fbReady)return;
-  if(stTimer)return; stTimer=setTimeout(()=>{stTimer=null;
-    db.ref('rooms/'+room+'/state').set(JSON.parse(JSON.stringify(S)));},400);
+const clean=o=>JSON.parse(JSON.stringify(o));
+const wErr=e=>warn('Firebase írás / write: '+e.message+' — database.rules.json közzétéve? / rules published?');
+function pushState(){ if(!fbReady||stTimer)return;
+  stTimer=setTimeout(()=>{stTimer=null;db.ref('rooms/'+room+'/state').set(clean(S)).catch(wErr)},400);
 }
 function pushDisplay(){ if(!fbReady)return;
-  db.ref('rooms/'+room+'/display').set({...display,ts:Date.now()});
+  db.ref('rooms/'+room+'/display').set(clean({...display,ts:Date.now()})).catch(wErr);
+}
+function pushInfo(){ render(); if(!fbReady)return;
+  db.ref('rooms/'+room+'/info').set({comp:$('iComp').value.trim().slice(0,80),venue:$('iVenue').value.trim().slice(0,80)}).catch(wErr);
 }
 function pushColors(){ if(!fbReady)return;
-  db.ref('rooms/'+room+'/colors').set({A:document.getElementById('colA').value,B:document.getElementById('colB').value});
+  db.ref('rooms/'+room+'/colors').set({A:$('colA').value,B:$('colB').value}).catch(wErr);
 }
+
+/* ---------- exports ---------- */
+function matchInfo(){return{comp:$('iComp').value.trim()||S.meta.competition||'',venue:$('iVenue').value.trim()||S.meta.venue||''}}
+function openExport(kind){window.open('export.html?room='+encodeURIComponent(room)+'&kind='+kind,'_blank','noopener')}
+// feed names are ALL CAPS: "BURI VIRÁG" becomes "Buri Virág"
+const nice=n=>String(n||'').toLocaleLowerCase('hu').replace(/(^|[\s\-'.])(\p{L})/gu,(m,a,b)=>a+b.toLocaleUpperCase('hu'));
+function ytBuild(){
+  const en=display.lang==='en', A=S.teams.A, B=S.teams.B, m=matchInfo(), started=S.events>0;
+  const date=S.meta.ts?new Date(S.meta.ts).toLocaleDateString(en?'en-GB':'hu-HU',{year:'numeric',month:'long',day:'numeric'}):'';
+  const sc=S.score.a+':'+S.score.b;
+  let title=S.finished?`${A.short} – ${B.short} ${sc}`:`${en?'LIVE':'ÉLŐ'}: ${A.short} – ${B.short}`;
+  [m.comp,en?'handball':'kézilabda'].forEach(x=>{if(x&&(title+' | '+x).length<=100)title+=' | '+x});
+  const top=tm=>Object.values(S.players).filter(p=>p.team===tm&&p.goals>0).sort((a,b)=>b.goals-a.goals||a.shots-b.shots).slice(0,4).map(p=>nice(p.name)+' '+p.goals).join(', ');
+  const L=[];
+  L.push(`${A.name||A.short} – ${B.name||B.short}`);
+  if(m.comp||S.meta.age)L.push([m.comp,S.meta.age].filter(Boolean).join(' · '));
+  if(date||m.venue)L.push([date,m.venue].filter(Boolean).join(' · '));
+  if(started){
+    const ht=S.ht?` (${en?'half-time':'félidő'}: ${S.ht.a}:${S.ht.b})`:'';
+    L.push('');
+    L.push((S.finished?(en?'Final score':'Végeredmény'):(en?'Score':'Állás'))+': '+sc+ht);
+    const ta=top('A'),tb=top('B');
+    if(ta||tb){L.push('');L.push(en?'Top scorers':'Legjobb góllövők');if(ta)L.push(`${A.short}: ${ta}`);if(tb)L.push(`${B.short}: ${tb}`)}
+  }
+  L.push('');
+  if(/^\d+$/.test(matchId||''))L.push((en?'Live data: ':'Élő adatok: ')+'https://livescore.mksz.hu/'+matchId);
+  L.push(en?'#handball #kezilabda':'#kézilabda #handball');
+  return{title:title.slice(0,100),desc:L.join('\n')};
+}
+function ytGen(){
+  if(!S.teams.A.short&&!S.teams.B.short){fail('Előbb kapcsolódj egy meccshez / Connect to a match first');return}
+  const y=ytBuild();$('ytTitle').value=y.title;$('ytDesc').value=y.desc;$('ytLen').textContent='· '+y.title.length+'/100';$('ytBox').style.display='block';
+}
+function copyText(id,btn){const el=$(id),o=btn.textContent;el.select();
+  (navigator.clipboard?navigator.clipboard.writeText(el.value):Promise.reject()).catch(()=>document.execCommand('copy')).finally(()=>{btn.textContent='✓';setTimeout(()=>btn.textContent=o,1400)})}
+
+const savedLink=LS('link_'+room); if(savedLink)$('mlink').value=savedLink;
+if(new URLSearchParams(location.search).get('demo'))addEventListener('load',()=>setTimeout(startDemo,300));
+else if(savedLink)addEventListener('load',()=>setTimeout(connectMatch,300));   // a reloaded panel picks the match up again
+render(); syncUI();
 </script>
 </body>
 </html>
