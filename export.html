@@ -8,12 +8,12 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
-body{margin:0;background:#101418;color:#F5F7FA;font:15px/1.5 Barlow,system-ui,sans-serif;padding:14px;text-align:center}
-canvas{max-width:100%;height:auto;border-radius:10px;border:1px solid #2C3742;background:#0E1319}
+body{margin:0;background:#EDF1F5;color:#1F2630;font:15px/1.5 Barlow,system-ui,sans-serif;padding:14px;text-align:center}
+canvas{max-width:100%;height:auto;border-radius:10px;border:1px solid #D9DFE6;background:#fff}
 .bar{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:12px 0}
-button{background:#FFB800;color:#181000;border:0;border-radius:9px;font:800 15px "Barlow Condensed";text-transform:uppercase;letter-spacing:.08em;padding:11px 18px;cursor:pointer}
-button.sec{background:#212A34;color:#F5F7FA;border:1px solid #2C3742}
-#st{color:#8B98A5;font-size:13px;min-height:20px}
+button{background:#1FB768;color:#fff;border:0;border-radius:9px;font:800 15px "Barlow Condensed";text-transform:uppercase;letter-spacing:.08em;padding:11px 18px;cursor:pointer}
+button.sec{background:#1F2630;color:#fff;border:1px solid #1F2630}
+#st{color:#66727F;font-size:13px;min-height:20px}
 </style>
 </head>
 <body>
@@ -42,7 +42,8 @@ const st=t=>document.getElementById('st').textContent=t;
 const num=v=>Number(v)||0, str=v=>v==null?'':String(v);
 const color=(v,d)=>/^#[0-9a-fA-F]{6}$/.test(v||'')?v:d;
 const CF='"Barlow Condensed",sans-serif';
-let S=null,C={A:'#D6001C',B:'#0057B8'},I={},lang='hu',LG={A:null,B:null};
+const DEF={A:'#F93154',B:'#1FB768'},NAVY='#1F2630',MUT='#66727F',ACC='#12994F';
+let S=null,C={A:DEF.A,B:DEF.B},I={},lang='hu',LG={A:null,B:null};
 const L={hu:{live:'ÉLŐ',ft:'VÉGEREDMÉNY',ht:'félidő',shots:'LÖVÉSEK',eff:'HATÉKONYSÁG',g7:'HÉTMÉTERES',saves:'VÉDÉSEK',to:'ELADOTT LABDÁK',two:'KIÁLLÍTÁS (2 PERC)',yel:'SÁRGA LAP',scorers:'GÓLLÖVŐK',src:'Adatok: MKSZ livescore'},
          en:{live:'LIVE',ft:'FULL-TIME',ht:'half-time',shots:'SHOTS',eff:'EFFICIENCY',g7:'7-METRE THROWS',saves:'SAVES',to:'TURNOVERS',two:'2-MIN SUSPENSIONS',yel:'YELLOW CARDS',scorers:'TOP SCORERS',src:'Data: MKSZ livescore'}};
 
@@ -53,7 +54,7 @@ async function load(){
     await ready;
     const v=(await firebase.database().ref('rooms/'+room).get()).val()||{};
     S=v.state||null; I=v.info||{}; lang=v.display&&v.display.lang==='en'?'en':'hu';
-    C={A:color(v.colors&&v.colors.A,'#D6001C'),B:color(v.colors&&v.colors.B,'#0057B8')};
+    C={A:color(v.colors&&v.colors.A,DEF.A),B:color(v.colors&&v.colors.B,DEF.B)};
     if(!S||!S.teams){st('Nincs meccsadat ebben a szobában. / No match data in this room.');return}
     st('Címerek betöltése… / Loading crests…');
     await Promise.all([document.fonts.load('800 80px "Barlow Condensed"'),document.fonts.load('italic 800 80px "Barlow Condensed"'),document.fonts.load('600 30px Barlow'),
@@ -89,6 +90,7 @@ function rrect(x,y,w,h,r){cx.beginPath();cx.roundRect(x,y,w,h,r)}
 function shadeOf(hex,f){const n=parseInt(hex.slice(1),16),c=[n>>16&255,n>>8&255,n&255].map(v=>Math.round(v*f));return `rgb(${c[0]},${c[1]},${c[2]})`}
 function chip(tm,x,y,size){           // white tile with the crest, or the team's initials
   cx.save();cx.shadowColor='rgba(0,0,0,.45)';cx.shadowBlur=30;cx.shadowOffsetY=10;cx.fillStyle='#fff';rrect(x-size/2,y-size/2,size,size,size*.14);cx.fill();cx.restore();
+  cx.strokeStyle='rgba(31,38,48,.12)';cx.lineWidth=2;rrect(x-size/2,y-size/2,size,size,size*.14);cx.stroke();
   const im=LG[tm];
   if(im){const pad=size*.1,box=size-2*pad,k=Math.min(box/im.width,box/im.height),w=im.width*k,h=im.height*k;cx.drawImage(im,x-w/2,y-h/2,w,h)}
   else{const ini=str(S.teams[tm].short||S.teams[tm].name).split(/\s+/).filter(Boolean).slice(0,3).map(w=>w[0]).join('').toUpperCase();
@@ -99,7 +101,7 @@ function split(W,H){                  // diagonal two-colour background
   let g=cx.createLinearGradient(W,0,W/2,H);g.addColorStop(0,C.B);g.addColorStop(1,shadeOf(C.B,.45));cx.fillStyle=g;cx.fillRect(0,0,W,H);
   cx.beginPath();cx.moveTo(0,0);cx.lineTo(W*.58,0);cx.lineTo(W*.42,H);cx.lineTo(0,H);cx.closePath();
   g=cx.createLinearGradient(0,0,W/2,H);g.addColorStop(0,C.A);g.addColorStop(1,shadeOf(C.A,.45));cx.fillStyle=g;cx.fill();
-  cx.beginPath();cx.moveTo(W*.58-10,0);cx.lineTo(W*.58+10,0);cx.lineTo(W*.42+10,H);cx.lineTo(W*.42-10,H);cx.closePath();cx.fillStyle='#0E1319';cx.fill();
+  cx.beginPath();cx.moveTo(W*.58-10,0);cx.lineTo(W*.58+10,0);cx.lineTo(W*.42+10,H);cx.lineTo(W*.42-10,H);cx.closePath();cx.fillStyle=NAVY;cx.fill();
 }
 const started=()=>num(S.events)>0, fin=()=>!!S.finished;
 
@@ -114,13 +116,13 @@ function drawThumb(){
   text(str(S.teams.A.short).toUpperCase(),300,530,84,{max:520,shadow:16});
   text(str(S.teams.B.short).toUpperCase(),W-300,530,84,{max:520,shadow:16});
   // centre plate: final score, or VS before/during the match
-  cx.save();cx.translate(W/2,300);cx.transform(1,0,-0.2,1,0,0);cx.fillStyle='#0E1319';rrect(-150,-92,300,184,14);cx.fill();
-  cx.fillStyle='#FFB800';cx.fillRect(-150,86,300,6);cx.restore();
+  cx.save();cx.translate(W/2,300);cx.transform(1,0,-0.2,1,0,0);cx.fillStyle=NAVY;rrect(-150,-92,300,184,14);cx.fill();
+  cx.fillStyle='#35DE8A';cx.fillRect(-150,86,300,6);cx.restore();
   if(fin()){text(num(S.score.a)+' : '+num(S.score.b),W/2,292,118,{italic:true,max:260});}
-  else text('VS',W/2,296,128,{italic:true,color:'#FFB800'});
+  else text('VS',W/2,296,128,{italic:true,color:'#35DE8A'});
   const tag=fin()?T.ft:T.live;
   cx.font=`800 34px ${CF}`;const tw=cx.measureText(tag).width+44;
-  cx.fillStyle=fin()?'#0E1319':'#E5252A';rrect(W/2-tw/2,418,tw,54,8);cx.fill();text(tag,W/2,446,34,{});
+  cx.fillStyle=fin()?NAVY:'#F93154';rrect(W/2-tw/2,418,tw,54,8);cx.fill();text(tag,W/2,446,34,{});
   const foot=[m.date,m.venue].filter(Boolean).join('  ·  ');
   if(foot)text(foot,W/2,H-52,38,{weight:700,max:W-120,shadow:10});
 }
@@ -128,16 +130,16 @@ function drawThumb(){
 /* ---------- post-match statistics image, 1920×1080 ---------- */
 function drawStats(){
   const W=cv.width=1920,H=cv.height=1080,T=L[lang],m=info(),sa=S.stats&&S.stats.A||{},sb=S.stats&&S.stats.B||{},pa=S.pens&&S.pens.A||{},pb=S.pens&&S.pens.B||{};
-  let g=cx.createLinearGradient(0,0,W,H);g.addColorStop(0,'#0E1319');g.addColorStop(1,'#18222D');cx.fillStyle=g;cx.fillRect(0,0,W,H);
+  let g=cx.createLinearGradient(0,0,W,H);g.addColorStop(0,'#FFFFFF');g.addColorStop(1,'#E9EEF3');cx.fillStyle=g;cx.fillRect(0,0,W,H);
   cx.fillStyle=C.A;cx.fillRect(0,0,W/2,14);cx.fillStyle=C.B;cx.fillRect(W/2,0,W/2,14);
   const head=[m.comp,m.age].filter(Boolean).join(' · ');
-  if(head)text(head.toUpperCase(),W/2,62,34,{weight:700,color:'#9FB0BF',max:W-200});
+  if(head)text(head.toUpperCase(),W/2,62,34,{weight:700,color:MUT,max:W-200});
   chip('A',170,205,190);chip('B',W-170,205,190);
-  text(str(S.teams.A.short).toUpperCase(),300,205,82,{align:'left',max:470});
-  text(str(S.teams.B.short).toUpperCase(),W-300,205,82,{align:'right',max:470});
-  text(num(S.score.a)+' : '+num(S.score.b),W/2,195,170,{italic:true,max:330});
+  text(str(S.teams.A.short).toUpperCase(),300,205,82,{align:'left',max:470,color:NAVY});
+  text(str(S.teams.B.short).toUpperCase(),W-300,205,82,{align:'right',max:470,color:NAVY});
+  text(num(S.score.a)+' : '+num(S.score.b),W/2,195,170,{italic:true,max:330,color:NAVY});
   const sub=(fin()?T.ft:T.live)+(S.ht?'  ·  '+T.ht+' '+num(S.ht.a)+' : '+num(S.ht.b):'');
-  text(sub.toUpperCase(),W/2,300,30,{weight:700,color:'#FFB800'});
+  text(sub.toUpperCase(),W/2,300,30,{weight:700,color:ACC});
   const pct=(a,b)=>num(b)?Math.round(100*num(a)/num(b)):0;
   const rows=[[T.shots,num(sa.shots),num(sb.shots),num(sa.goals)+' / '+num(sa.shots),num(sb.goals)+' / '+num(sb.shots)],
     [T.eff,pct(sa.goals,sa.shots),pct(sb.goals,sb.shots),pct(sa.goals,sa.shots)+'%',pct(sb.goals,sb.shots)+'%'],
@@ -146,20 +148,20 @@ function drawStats(){
     [T.to,num(sa.to),num(sb.to)],[T.two,num(pa.s2),num(pb.s2)],[T.yel,num(pa.y),num(pb.y)]];
   let y=390;const bw=470;
   rows.forEach(([lab,a,b,fa,fb])=>{const tot=(a+b)||1;
-    text(fa==null?a:fa,300,y,56,{align:'right',max:210});text(fb==null?b:fb,W-300,y,56,{align:'left',max:210});
-    text(lab,W/2,y,28,{weight:700,color:'#9FB0BF'});
-    cx.fillStyle='rgba(255,255,255,.09)';rrect(330,y-9,bw,18,9);cx.fill();rrect(W-330-bw,y-9,bw,18,9);cx.fill();
+    text(fa==null?a:fa,300,y,56,{align:'right',max:210,color:NAVY});text(fb==null?b:fb,W-300,y,56,{align:'left',max:210,color:NAVY});
+    text(lab,W/2,y,28,{weight:700,color:MUT});
+    cx.fillStyle='rgba(31,38,48,.10)';rrect(330,y-9,bw,18,9);cx.fill();rrect(W-330-bw,y-9,bw,18,9);cx.fill();
     cx.fillStyle=C.A;const wa=bw*a/tot;if(wa>0){rrect(330+bw-wa,y-9,wa,18,9);cx.fill()}
     cx.fillStyle=C.B;const wb=bw*b/tot;if(wb>0){rrect(W-330-bw,y-9,wb,18,9);cx.fill()}
     y+=72});
   // top scorers
-  y+=6;text(T.scorers,W/2,y,28,{weight:700,color:'#FFB800'});
+  y+=6;text(T.scorers,W/2,y,28,{weight:700,color:ACC});
   const top=tm=>Object.values(S.players||{}).filter(p=>p.team===tm&&num(p.goals)>0).sort((a,b)=>num(b.goals)-num(a.goals)||num(a.shots)-num(b.shots)).slice(0,3);
   const line=p=>str(p.name)+'  '+num(p.goals)+' / '+num(p.shots);
-  top('A').forEach((p,i)=>text(line(p),120,y+i*42,32,{align:'left',weight:600,font:'Barlow,sans-serif',max:760}));
-  top('B').forEach((p,i)=>text(line(p),W-120,y+i*42,32,{align:'right',weight:600,font:'Barlow,sans-serif',max:760}));
+  top('A').forEach((p,i)=>text(line(p),120,y+i*42,32,{align:'left',weight:600,font:'Barlow,sans-serif',max:760,color:NAVY}));
+  top('B').forEach((p,i)=>text(line(p),W-120,y+i*42,32,{align:'right',weight:600,font:'Barlow,sans-serif',max:760,color:NAVY}));
   const foot=[m.date,m.venue,T.src].filter(Boolean).join('  ·  ');
-  text(foot,W/2,H-34,24,{weight:600,color:'#6f7f8e',font:'Barlow,sans-serif',max:W-200});
+  text(foot,W/2,H-34,24,{weight:600,color:MUT,font:'Barlow,sans-serif',max:W-200});
 }
 load();
 </script>

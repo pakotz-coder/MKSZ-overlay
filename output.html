@@ -8,7 +8,12 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
-:root{--ca:#D6001C;--cb:#0057B8;--ink:#FFFFFF;--carbon:#0E1319;--carbon2:#161E27;--gold:#FFB800;--mut:#9FB0BF;--skew:-12deg}
+/* Default look follows the MKSZ livescore page: red and green on dark navy, light panels.
+   --gold is the accent on dark surfaces, --acc2 the accent on the panel body. output.html?theme=dark gives the old dark look. */
+:root{--ca:#F93154;--cb:#1FB768;--ink:#FFFFFF;--carbon:#1F2630;--carbon2:#2B3542;--gold:#35DE8A;--acc2:#12994F;--hmut:#AEB9C6;--mut:#66727F;--skew:-12deg;
+  --body1:#FFFFFF;--body2:#EDF1F5;--bink:#1F2630;--hair:rgba(31,38,48,.10);--soft:rgba(31,38,48,.06);--soft2:rgba(31,38,48,.13);--line2:rgba(31,38,48,.30)}
+html.dark{--carbon:#0E1319;--carbon2:#161E27;--gold:#FFB800;--acc2:#FFB800;--hmut:#9FB0BF;--mut:#9FB0BF;
+  --body1:rgba(14,19,25,.97);--body2:rgba(18,25,33,.97);--bink:#FFFFFF;--hair:rgba(255,255,255,.07);--soft:rgba(255,255,255,.06);--soft2:rgba(255,255,255,.16);--line2:rgba(255,255,255,.25)}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{background:transparent;overflow:hidden;width:100%;height:100%}
 #stage{position:absolute;top:0;left:0;width:1920px;height:1080px;transform-origin:top left;font-family:Barlow,sans-serif;color:var(--ink);transition:opacity .3s}
@@ -23,7 +28,7 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
 .tname{font:800 26px/1 "Barlow Condensed";text-transform:uppercase;letter-spacing:.03em;max-width:250px;white-space:nowrap;overflow:hidden}
 .tscore{font:800 40px/1 "Barlow Condensed";min-width:44px;text-align:center}
 .tdots{display:flex;flex-direction:column;gap:4px}
-.dot{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.28)}.dot.on{background:var(--gold)}
+.dot{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.28)}.dot.on{background:#fff}
 .en{font:800 12px "Barlow Condensed";background:#fff;color:#111;border-radius:4px;padding:2px 6px;letter-spacing:.05em;display:none}
 .en.show{display:block}
 #chip{background:var(--carbon);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 20px;transform:skewX(var(--skew));height:64px;z-index:2;border-radius:4px;box-shadow:0 0 0 2px rgba(255,255,255,.06) inset}
@@ -41,43 +46,44 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
 .fmain>div{transform:skewX(calc(var(--skew)*-1))}
 .flabel{font:700 16px "Barlow Condensed";color:var(--gold);text-transform:uppercase;letter-spacing:.22em}
 .fplayer{font:800 40px/1.05 "Barlow Condensed";text-transform:uppercase}
-.fscore{font:700 24px "Barlow Condensed";color:var(--mut)}
+.fscore{font:700 24px "Barlow Condensed";color:var(--hmut)}
 /* ---------- center panel ---------- */
 #panel{position:absolute;left:50%;top:50%;width:1150px;transform:translate(-50%,-50%);filter:drop-shadow(0 14px 40px rgba(0,0,0,.65));clip-path:polygon(0 0,0 0,-12% 100%,-12% 100%);transition:clip-path .55s cubic-bezier(.2,.8,.2,1)}
 #panel.show{clip-path:polygon(-4% 0,112% 0,104% 100%,-12% 100%)}
 .phead{display:flex;align-items:center;gap:16px;background:linear-gradient(95deg,var(--carbon) 60%,var(--carbon2));transform:skewX(var(--skew));border-radius:8px 8px 0 0;padding:16px 34px;border-bottom:3px solid var(--gold)}
 .phead>*{transform:skewX(calc(var(--skew)*-1))}
 .ptitle{font:800 34px/1 "Barlow Condensed";text-transform:uppercase;letter-spacing:.04em;font-style:italic}
-.psub{font:600 16px "Barlow Condensed";color:var(--mut);text-transform:uppercase;letter-spacing:.14em;margin-left:auto}
-.pbody{background:linear-gradient(180deg,rgba(14,19,25,.97),rgba(18,25,33,.97));transform:skewX(var(--skew));border-radius:0 0 8px 8px;padding:26px 40px;min-height:180px}
+.psub{font:600 16px "Barlow Condensed";color:var(--hmut);text-transform:uppercase;letter-spacing:.14em;margin-left:auto}
+.pbody{color:var(--bink);background:linear-gradient(180deg,var(--body1),var(--body2));transform:skewX(var(--skew));border-radius:0 0 8px 8px;padding:26px 40px;min-height:180px}
 .pbody>.un{transform:skewX(calc(var(--skew)*-1))}
 .fadeSwap{animation:fs .35s ease}
 @keyframes fs{from{opacity:0;transform:skewX(calc(var(--skew)*-1)) translateY(10px)}to{opacity:1;transform:skewX(calc(var(--skew)*-1)) translateY(0)}}
 /* stat rows */
-.srow{display:grid;grid-template-columns:150px 1fr 260px 1fr 150px;align-items:center;gap:14px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+.srow{display:grid;grid-template-columns:150px 1fr 260px 1fr 150px;align-items:center;gap:14px;padding:9px 0;border-bottom:1px solid var(--hair)}
 .srow:last-child{border-bottom:0}
 .sval{font:800 34px/1 "Barlow Condensed";text-align:center}
 .slab{font:700 17px "Barlow Condensed";color:var(--mut);text-transform:uppercase;letter-spacing:.1em;text-align:center}
-.bar{height:12px;border-radius:99px;background:rgba(255,255,255,.09);overflow:hidden;display:flex}
+.bar{height:12px;border-radius:99px;background:var(--soft2);overflow:hidden;display:flex}
 .bar i{display:block;height:100%;width:0;transition:width .9s cubic-bezier(.2,.8,.2,1)}
 .bar.rev{justify-content:flex-end}
 .thdr{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:10px}
 .thdr b{font:800 24px "Barlow Condensed";text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* tables */
 .tbl{width:100%;border-collapse:collapse}
-.tbl td,.tbl th{padding:8px 10px;font:600 20px Barlow;border-bottom:1px solid rgba(255,255,255,.07);text-align:left}
+.tbl td,.tbl th{padding:8px 10px;font:600 20px Barlow;border-bottom:1px solid var(--hair);text-align:left}
 .tbl th{font:700 15px "Barlow Condensed";color:var(--mut);text-transform:uppercase;letter-spacing:.1em}
 .tbl td.n{font:800 24px "Barlow Condensed";text-align:right;white-space:nowrap}
 .tbl td.n small{font:600 16px "Barlow Condensed";color:var(--mut)}
-.jer{display:inline-block;min-width:34px;text-align:center;font:800 17px "Barlow Condensed";background:rgba(255,255,255,.1);border-radius:5px;padding:2px 5px;margin-right:10px}
+.jer{display:inline-block;min-width:34px;text-align:center;font:800 17px "Barlow Condensed";background:var(--soft2);border-radius:5px;padding:2px 5px;margin-right:10px}
+.jer[style]{color:#fff}
 .cols2{display:grid;grid-template-columns:1fr 1fr;gap:0 44px;align-items:start}
 .empty{text-align:center;color:var(--mut);font:600 22px "Barlow Condensed";text-transform:uppercase;letter-spacing:.12em;padding:50px 0}
 /* gate grid */
 .gates{display:flex;justify-content:space-around;align-items:center}
 .gatebox{text-align:center}
 .gname{font:800 24px "Barlow Condensed";text-transform:uppercase;margin-bottom:12px}
-.ggrid{display:grid;grid-template-columns:repeat(3,110px);grid-template-rows:repeat(3,86px);gap:5px;background:rgba(255,255,255,.06);padding:10px;border-radius:10px;border:3px solid rgba(255,255,255,.25)}
-.gcell{display:flex;align-items:center;justify-content:center;font:800 30px "Barlow Condensed";border-radius:6px;background:rgba(255,255,255,.05)}
+.ggrid{display:grid;grid-template-columns:repeat(3,110px);grid-template-rows:repeat(3,86px);gap:5px;background:var(--soft);padding:10px;border-radius:10px;border:3px solid var(--line2)}
+.gcell{display:flex;align-items:center;justify-content:center;font:800 30px "Barlow Condensed";border-radius:6px;background:var(--soft)}
 /* shot map */
 .courts{display:grid;grid-template-columns:1fr 1fr;gap:30px}
 .court{text-align:center}
@@ -85,21 +91,21 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
 .csum{font:700 18px "Barlow Condensed";color:var(--mut);text-transform:uppercase;letter-spacing:.1em;margin-top:6px}
 /* cards (keepers, best, momentum) */
 .cards{display:grid;grid-template-columns:1fr 1fr;gap:26px}
-.pcard{background:rgba(255,255,255,.045);border-radius:10px;padding:18px 22px;border-top:5px solid var(--tc,#fff);text-align:center}
+.pcard{background:var(--soft);border-radius:10px;padding:18px 22px;border-top:5px solid var(--tc,#fff);text-align:center}
 .pc-team{font:700 17px "Barlow Condensed";text-transform:uppercase;letter-spacing:.14em;color:var(--mut)}
-.pc-lab{font:700 15px "Barlow Condensed";text-transform:uppercase;letter-spacing:.16em;color:var(--gold);margin-top:8px}
+.pc-lab{font:700 15px "Barlow Condensed";text-transform:uppercase;letter-spacing:.16em;color:var(--acc2);margin-top:8px}
 .pc-name{font:800 32px/1.1 "Barlow Condensed";text-transform:uppercase;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pc-big{font:800 84px/1 "Barlow Condensed";font-style:italic;margin-top:6px}
 .pc-big small{font:700 34px "Barlow Condensed";color:var(--mut);font-style:normal}
 .pc-line{font:600 19px Barlow;color:var(--mut);margin-top:4px}
-.pc-line b{color:var(--ink)}
-.pc-sep{height:1px;background:rgba(255,255,255,.1);margin:14px 0 4px}
+.pc-line b{color:var(--bink)}
+.pc-sep{height:1px;background:var(--hair);margin:14px 0 4px}
 .curr{text-align:center;margin-top:18px;font:800 28px "Barlow Condensed";text-transform:uppercase;letter-spacing:.06em}
-.curr span{color:var(--gold)}
+.curr span{color:var(--acc2)}
 /* discipline */
 .dico{display:inline-block;width:20px;height:27px;border-radius:3px;vertical-align:middle;margin-right:8px}
 .dy{background:#FFD21F}.dr{background:#E5252A}.db{background:#2D7FF9}
-.d2{display:inline-block;font:800 17px "Barlow Condensed";background:rgba(255,255,255,.16);border-radius:5px;padding:2px 7px;margin-right:8px;vertical-align:middle}
+.d2{display:inline-block;font:800 17px "Barlow Condensed";background:var(--soft2);border-radius:5px;padding:2px 7px;margin-right:8px;vertical-align:middle}
 .dlists{display:grid;grid-template-columns:1fr 1fr;gap:0 44px;margin-top:12px}
 .dlists .r{text-align:right}
 .dpl{font:600 19px Barlow;padding:5px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -110,16 +116,16 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
 /* htft */
 .htft{display:flex;align-items:center;justify-content:center;gap:40px;padding:18px 0}
 .htft .nm{font:800 40px/1.05 "Barlow Condensed";text-transform:uppercase;width:340px;text-align:center}
-.htft .nm img{display:block;height:110px;max-width:200px;object-fit:contain;margin:0 auto 12px;background:#fff;border-radius:12px;padding:8px}
+.htft .nm img{display:block;height:110px;max-width:200px;object-fit:contain;margin:0 auto 12px;background:#fff;border-radius:12px;padding:8px;box-shadow:0 0 0 1px var(--hair)}
 .bigsc{font:800 130px/1 "Barlow Condensed";font-style:italic;white-space:nowrap}
 .htsc{text-align:center;font:700 26px "Barlow Condensed";color:var(--mut);margin-top:-6px}
 .pm{display:flex;align-items:center;justify-content:center;gap:30px;padding:10px 0 18px}
 .pm-team{width:400px;text-align:center}
-.pm-crest{display:block;height:190px;max-width:280px;object-fit:contain;margin:0 auto 16px;background:#fff;border-radius:16px;padding:12px}
+.pm-crest{display:block;height:190px;max-width:280px;object-fit:contain;margin:0 auto 16px;background:#fff;border-radius:16px;padding:12px;box-shadow:0 0 0 1px var(--hair)}
 .pm-name{font:800 44px/1.05 "Barlow Condensed";text-transform:uppercase}
 .pm-bar{height:6px;width:120px;border-radius:3px;margin:14px auto 0}
-.pm-vs{font:800 84px/1 "Barlow Condensed";font-style:italic;color:var(--gold)}
-.st-row{font:600 24px Barlow;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+.pm-vs{font:800 84px/1 "Barlow Condensed";font-style:italic;color:var(--acc2)}
+.st-row{font:600 24px Barlow;padding:9px 0;border-bottom:1px solid var(--hair)}
 .cols2 .r{text-align:right}
 .hmeta{text-align:center;font:600 18px "Barlow Condensed";color:var(--mut);text-transform:uppercase;letter-spacing:.12em}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -162,13 +168,15 @@ const L={
  hu:{goal:'GÓL!',goal7:'GÓL — HETESBŐL!',goalW:'Gól',shots:'Lövések',eff:'Hatékonyság',g7:'Hétméteres',saves:'Védések',to:'Eladott labdák',timeouts:'Időkérések',post:'Kapufa',miss:'Fölé / mellé',block:'Blokkolva',saved:'Védve',teamstats:'Csapatstatisztika',shotsT:'Lövéskimenetek',gate:'Hová érkeztek a gólok',shotmap:'Lövéstérkép',shotmapS:'gól / lövés zónánként',scorers:'Góllövők',gk:'Kapuspárbaj',best:'A mezőny legjobbjai',topScorer:'Legjobb góllövő',bestGk:'Kapus',momentum:'Lendület',bestRun:'Leghosszabb sorozat',curRun:'Futó sorozat',lead:'A mérkőzés íve',disc:'Fegyelmi',yellow:'Sárga lap',two:'Kiállítás (2 perc)',red:'Piros lap',blue:'Kék lap',roster:'Keret',officials:'Stáb',pre:'Mérkőzés előtt',htP:'Félidő',ftP:'Végeredmény',live:'ÉLŐ',diff:'gólkülönbség',empty:'ÜRES KAPU',min:'perc',nodata:'Még nincs adat',from7:'7m',ofShots:'lövésből',savesOf:'védés'},
  en:{goal:'GOAL!',goal7:'GOAL — 7M PENALTY!',goalW:'Goals',shots:'Shots',eff:'Efficiency',g7:'7-metre throws',saves:'Saves',to:'Turnovers',timeouts:'Timeouts',post:'Woodwork',miss:'Off target',block:'Blocked',saved:'Saved',teamstats:'Team statistics',shotsT:'Shot outcomes',gate:'Goal placement',shotmap:'Shot map',shotmapS:'goals / shots by zone',scorers:'Top scorers',gk:'Goalkeeper duel',best:'Top performers',topScorer:'Top scorer',bestGk:'Goalkeeper',momentum:'Momentum',bestRun:'Longest run',curRun:'Current run',lead:'Match flow',disc:'Discipline',yellow:'Yellow cards',two:'2-minute suspensions',red:'Red cards',blue:'Blue cards',roster:'Squad',officials:'Bench',pre:'Up next',htP:'Half-time',ftP:'Full-time',live:'LIVE',diff:'goal difference',empty:'EMPTY NET',min:'min',nodata:'No data yet',from7:'7m',ofShots:'shots',savesOf:'saves'}
 };
-let S=null,D={},I={},C={A:'#D6001C',B:'#0057B8'},curGfx=null,flashShown=null;
+if(new URLSearchParams(location.search).get('theme')==='dark')document.documentElement.classList.add('dark');
+const DEF={A:'#F93154',B:'#1FB768'};
+let S=null,D={},I={},C={A:DEF.A,B:DEF.B},curGfx=null,flashShown=null;
 
 firebase.initializeApp(FIREBASE_CONFIG);
 firebase.auth().signInAnonymously().then(()=>{
   const db=firebase.database();
   db.ref('rooms/'+room+'/state').on('value',s=>{S=normalize(s.val());if(S)renderAll()});
-  db.ref('rooms/'+room+'/colors').on('value',s=>{const v=s.val()||{};C={A:color(v.A,'#D6001C'),B:color(v.B,'#0057B8')};
+  db.ref('rooms/'+room+'/colors').on('value',s=>{const v=s.val()||{};C={A:color(v.A,DEF.A),B:color(v.B,DEF.B)};
     document.documentElement.style.setProperty('--ca',C.A);
     document.documentElement.style.setProperty('--cb',C.B);if(S)renderAll()});
   db.ref('rooms/'+room+'/info').on('value',s=>{I=s.val()||{};if(S)renderAll()});
@@ -343,7 +351,7 @@ const GFX={
  gate(T){
    const g=(team,col)=>{const arr=S.gate[team],mx=Math.max(1,...arr);
      return `<div class="gatebox"><div class="gname" style="color:${col}">${esc(S.teams[team].short)}</div><div class="ggrid">${
-     arr.map(v=>`<div class="gcell" style="background:${v?`color-mix(in srgb, ${col} ${Math.round(20+60*v/mx)}%, transparent)`:'rgba(255,255,255,.05)'}">${v||''}</div>`).join('')}</div></div>`};
+     arr.map(v=>`<div class="gcell" style="background:${v?`color-mix(in srgb, ${col} ${Math.round(20+60*v/mx)}%, transparent)`:'var(--soft)'}">${v||''}</div>`).join('')}</div></div>`};
    return{title:T.gate,sub:'',html:`<div class="gates">${g('A',C.A)}${g('B',C.B)}</div>`}},
  shotmap(T){
    const c=(team,col)=>`<div class="court"><div class="gname" style="color:${col}">${esc(S.teams[team].short)}</div>${courtSVG(S.zones[team],col)}
@@ -382,12 +390,12 @@ const GFX={
    const tmax=Math.max(600,S.finished?num(S.clock.cap)||0:0,clockNow(),...d.map(p=>p.t));
    const x=v=>30+(W-60)*Math.min(1,v/tmax), y=v=>H/2-(H/2-16)*(v/max);
    let pts=`30,${H/2}`,prev=0; d.forEach(p=>{pts+=` ${x(p.t)},${y(prev)} ${x(p.t)},${y(p.d)}`;prev=p.d}); pts+=` ${x(tmax)},${y(prev)}`;
-   const half=num(S.periodLength)*60, hx=half>0&&half<tmax?`<line x1="${x(half)}" y1="10" x2="${x(half)}" y2="${H-10}" stroke="rgba(255,255,255,.18)" stroke-dasharray="5 6"/>`:'';
+   const half=num(S.periodLength)*60, hx=half>0&&half<tmax?`<line x1="${x(half)}" y1="10" x2="${x(half)}" y2="${H-10}" stroke="currentColor" stroke-opacity=".22" stroke-dasharray="5 6"/>`:'';
    return{title:T.lead,sub:T.diff,html:`<svg id="leadsvg" viewBox="0 0 ${W} ${H}">
-     <line x1="30" y1="${H/2}" x2="${W-30}" y2="${H/2}" stroke="rgba(255,255,255,.25)"/>${hx}
+     <line x1="30" y1="${H/2}" x2="${W-30}" y2="${H/2}" stroke="currentColor" stroke-opacity=".3"/>${hx}
      <text x="34" y="20" fill="${C.A}" font-size="17" font-weight="700" font-family="Barlow Condensed">+${max} ${esc(S.teams.A.short)}</text>
      <text x="34" y="${H-8}" fill="${C.B}" font-size="17" font-weight="700" font-family="Barlow Condensed">+${max} ${esc(S.teams.B.short)}</text>
-     <polyline points="${pts}" fill="none" stroke="var(--gold)" stroke-width="4" stroke-linejoin="round"/></svg>`}},
+     <polyline points="${pts}" fill="none" style="stroke:var(--acc2)" stroke-width="4" stroke-linejoin="round"/></svg>`}},
  discipline(T){
    const pa=S.pens.A,pb=S.pens.B;
    const list=(tm,cls)=>{const ps=teamPlayers(tm).filter(p=>num(p.y)+num(p.s2)+num(p.r)+num(p.b)>0)
@@ -431,13 +439,13 @@ const ZPOS=[[450,45],[400,150],[250,178],[100,150],[50,45],[425,268],[250,240],[
 function courtSVG(z,col){
   const mx=Math.max(1,...z.s);
   const b=z.s.map((s,i)=>{if(!s)return'';const [x,y]=ZPOS[i],r=19+9*s/mx;
-    return `<circle cx="${x}" cy="${y}" r="${r.toFixed(1)}" fill="${col}" fill-opacity="${(.35+.6*s/mx).toFixed(2)}" stroke="rgba(255,255,255,.75)" stroke-width="${i===17?3:1.5}"/>
+    return `<circle cx="${x}" cy="${y}" r="${r.toFixed(1)}" fill="${col}" fill-opacity="${(.8+.2*s/mx).toFixed(2)}" stroke="#fff" stroke-width="${i===17?3:1.5}"/>
       <text x="${x}" y="${y+6}" text-anchor="middle" fill="#fff" font-size="17" font-weight="800" font-family="Barlow Condensed">${z.g[i]}/${s}</text>`}).join('');
-  return `<svg viewBox="0 0 500 345"><rect x="2" y="12" width="496" height="331" rx="6" fill="rgba(255,255,255,.035)" stroke="rgba(255,255,255,.3)" stroke-width="2"/>
-    <rect x="212" y="2" width="76" height="12" fill="rgba(255,255,255,.55)"/>
-    <path d="M70 12 A180 108 0 0 0 430 12" fill="rgba(255,255,255,.05)" stroke="rgba(255,255,255,.45)" stroke-width="2"/>
-    <path d="M6 60 A244 172 0 0 0 494 60" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="2" stroke-dasharray="9 8"/>
-    <line x1="2" y1="330" x2="498" y2="330" stroke="rgba(255,255,255,.2)" stroke-width="2"/>${b}</svg>`;
+  return `<svg viewBox="0 0 500 345"><rect x="2" y="12" width="496" height="331" rx="6" fill="currentColor" fill-opacity=".04" stroke="currentColor" stroke-opacity=".3" stroke-width="2"/>
+    <rect x="212" y="2" width="76" height="12" fill="currentColor" fill-opacity=".55"/>
+    <path d="M70 12 A180 108 0 0 0 430 12" fill="currentColor" fill-opacity=".05" stroke="currentColor" stroke-opacity=".45" stroke-width="2"/>
+    <path d="M6 60 A244 172 0 0 0 494 60" fill="none" stroke="currentColor" stroke-opacity=".3" stroke-width="2" stroke-dasharray="9 8"/>
+    <line x1="2" y1="330" x2="498" y2="330" stroke="currentColor" stroke-opacity=".2" stroke-width="2"/>${b}</svg>`;
 }
 
 function buildPanel(update){

@@ -51,3 +51,8 @@ in OBS / Yolobox. Same idea as `handball-overlay`, different data source. Hungar
 - Feed crest URLs are signed and expire after 24 hours, so crests only show around the match itself.
 - `rooms/{room}/info` holds the operator-typed competition and venue; they override the feed's values.
 - `control.html` also writes the YouTube title and description from the current state.
+
+## Look
+- The palette follows the MKSZ livescore page: red `#F93154`, green `#1FB768`, navy `#1F2630`, light panels.
+  In `output.html` every surface colour is a CSS variable on `:root`; `output.html?theme=dark` switches to
+  the earlier dark look (`html.dark`). Team colours come from the room and default to the red and green.
