@@ -46,6 +46,8 @@ code{background:var(--panel2);padding:2px 7px;border-radius:6px;font-size:13px}
   <div class="links" id="links">
     <div class="linkrow"><b>Vezérlő</b><a id="ctrlA" target="_blank"></a><button class="copy" onclick="cp('ctrlA',this)">Másol / Copy</button></div>
     <div class="linkrow"><b>Kimenet</b><a id="outA" target="_blank"></a><button class="copy" onclick="cp('outA',this)">Másol / Copy</button></div>
+    <p class="foot" style="text-align:left;margin-top:12px">🔒 A linkek végén titkos kód van: aki ismeri, az vezérelheti az adást. Ne tedd közzé; mentsd el a két linket, mert másik eszközön ugyanaz a név új kódot kap. /
+      The links end in a secret code: whoever has it can control the broadcast. Keep them private and save both links — on another device the same name gets a new code.</p>
   </div>
 </div>
 
@@ -78,9 +80,19 @@ code{background:var(--panel2);padding:2px 7px;border-radius:6px;font-size:13px}
 
 <script>
 function base(){const u=location.href;return u.substring(0,u.lastIndexOf('/')+1)}
+// The room id is the only secret: anyone who knows it can drive the broadcast. So it is the typed name plus a
+// long random token, remembered on this device so the same name gives the same links again.
+function secret(){const a='abcdefghijkmnpqrstuvwxyz23456789',b=new Uint8Array(12);crypto.getRandomValues(b);return Array.from(b,x=>a[x%a.length]).join('')}
+function roomFor(name){
+  const key='mksz_room_'+name; let r=null;
+  try{r=localStorage.getItem(key)}catch(e){}
+  if(!r||!/^[a-z0-9_-]{1,60}$/.test(r)){r=name+'-'+secret();try{localStorage.setItem(key,r)}catch(e){}}
+  return r;
+}
 function gen(){
-  const r=(document.getElementById('room').value||'').trim().toLowerCase().replace(/[^a-z0-9_-]/g,'-');
-  if(!r){document.getElementById('room').focus();return}
+  const name=(document.getElementById('room').value||'').trim().toLowerCase().replace(/[^a-z0-9_-]/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'').slice(0,40);
+  if(!name){document.getElementById('room').focus();return}
+  const r=roomFor(name);
   const c=base()+'control.html?room='+r, o=base()+'output.html?room='+r;
   const ca=document.getElementById('ctrlA'),oa=document.getElementById('outA');
   ca.textContent=c;ca.href=c;oa.textContent=o;oa.href=o;
